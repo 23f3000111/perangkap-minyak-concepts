@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perangkap Minyak — two web concepts</title>
+<meta name="description" content="Two full website concepts for Kualiti Alam Hijau (M) Sdn Bhd, grease trap manufacturer, Malaysia. Twenty-three pages each, English and Bahasa Melayu.">
+<meta name="theme-color" content="#0B2C53">
+<link rel="icon" href="assets/img/brand/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="assets/icons/ph-regular.css">
+<style>
+  :root {
+    --navy: #0B2C53; --navy-deep: #071F3C; --ink: #16233A; --steel: #5B6B80;
+    --line: #DCE3EC; --wash: #F2F6FA; --link: #1B5FA8;
+    --green: #0B6623; --green-deep: #07491A;
+    --sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'Geist Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #fff; color: var(--ink);
+    font: 400 1rem/1.6 var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  .wrap { width: min(100% - 3rem, 1080px); margin-inline: auto; }
+  header { padding: clamp(3rem, 8vw, 5.5rem) 0 clamp(2rem, 4vw, 3rem); }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: .6rem; margin: 0 0 1rem;
+    font-family: var(--mono); font-size: .78rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--link);
+  }
+  .eyebrow::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--green); }
+  h1 {
+    margin: 0 0 1rem; color: var(--navy); font-weight: 600;
+    font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; letter-spacing: -.025em;
+  }
+  .lede { max-width: 62ch; margin: 0; color: var(--steel); font-size: 1.08rem; }
+
+  .grid { display: grid; gap: clamp(1.25rem, 3vw, 2rem); grid-template-columns: repeat(2, 1fr); padding-bottom: 3rem; }
+  .card {
+    display: flex; flex-direction: column; overflow: hidden;
+    border: 1px solid var(--line); border-radius: 16px; background: #fff;
+    text-decoration: none; color: inherit;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .card:hover { border-color: var(--link); transform: translateY(-3px); box-shadow: 0 18px 40px -22px rgba(11,44,83,.45); }
+  .swatch { height: 8px; }
+  .card-c .swatch { background: linear-gradient(90deg, #0B6623, #E8A33D); }
+  .card-d .swatch { background: linear-gradient(90deg, #0B2C53, #23A455); }
+  .card-body { padding: clamp(1.25rem, 3vw, 1.9rem); display: grid; gap: .6rem; align-content: start; flex: 1; }
+  .card h2 { margin: 0; color: var(--navy); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; }
+  .card .tag { font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--steel); }
+  .card p { margin: 0; color: var(--steel); font-size: .94rem; }
+  .card ul { margin: .4rem 0 0; padding: 0; list-style: none; display: grid; gap: .35rem; }
+  .card li { position: relative; padding-left: 1.1rem; font-size: .88rem; color: var(--steel); }
+  .card li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  .go {
+    display: inline-flex; align-items: center; gap: .5rem; margin-top: auto; padding-top: 1.1rem;
+    color: var(--link); font-weight: 600; font-size: .9rem;
+  }
+
+  .note { border-top: 1px solid var(--line); padding: 2rem 0 3.5rem; color: var(--steel); font-size: .88rem; }
+  .note p { max-width: 70ch; margin: 0 0 .6rem; }
+  .note b { color: var(--navy); }
+  code { font-family: var(--mono); font-size: .85em; background: var(--wash); padding: .1em .4em; border-radius: 4px; }
+
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Kualiti Alam Hijau (M) Sdn Bhd</p>
+    <h1>Perangkap Minyak — two web concepts</h1>
+    <p class="lede">
+      Two complete website directions for a Malaysian grease trap manufacturer.
+      Same twenty-three pages, same catalogue data, same seventeen-model
+      specification table — two different arguments about how a buyer should
+      meet it. Both run in English and Bahasa Melayu.
+    </p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+
+    <a class="card card-c" href="Site-C-Catalogue/index.html">
+      <span class="swatch" aria-hidden="true"></span>
+      <span class="card-body">
+        <span class="tag">Concept C</span>
+        <h2>Trade Counter</h2>
+        <p>
+          A trade catalogue, not a brochure. The buyer arrives knowing roughly
+          what they need, so every element is a route into the catalogue and the
+          page is dense on purpose.
+        </p>
+        <ul>
+          <li>Filterable catalogue with the filter state in the URL</li>
+          <li>An enquiry list in place of a shopping cart</li>
+          <li>Scroll-scrubbed cutaway of the three chambers</li>
+        </ul>
+        <span class="go">Open concept C <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+      </span>
+    </a>
+
+    <a class="card card-d" href="Site-D-Waterline/index.html">
+      <span class="swatch" aria-hidden="true"></span>
+      <span class="card-body">
+        <span class="tag">Concept D</span>
+        <h2>Waterline</h2>
+        <p>
+          Navy ground, one arc motif, and a photographic hero. Built from a
+          fixed kit of nineteen blocks, so no page invents a twentieth and the
+          whole site keeps one grammar.
+        </p>
+        <ul>
+          <li>Meal-volume sizer that names the model as you drag</li>
+          <li>Jump bar built from the blocks each page actually used</li>
+          <li>Its own 75-check harness at <code>checks.html</code></li>
+        </ul>
+        <span class="go">Open concept D <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+      </span>
+    </a>
+
+  </div>
+</main>
+
+<section class="note">
+  <div class="wrap">
+    <p>
+      <b>Both concepts share one data layer.</b> Products, the model table, the
+      dosing chart, services, approvals and articles all live in
+      <code>assets/data/</code>, so a change to a specification appears on both
+      sites at once.
+    </p>
+    <p>
+      <b>These are design concepts.</b> There is no backend: the enquiry form
+      and the assistant acknowledge locally and hand off to WhatsApp, which is
+      how enquiries actually reach this business. No prices are published,
+      because they are quoted per installation.
+    </p>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,392 @@
+/* =========================================================================
+   Perangkap Minyak - shared primitives
+   Motion, the frame system, cursors and page transitions. Colour comes from
+   the host stylesheet through the tokens below; this file never picks a
+   palette of its own.
+
+   Expected from the host:
+     --accent  --accent-2  --ink  --ink-3  --bg  --surface  --line
+   ========================================================================= */
+
+:root {
+  --e-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --e-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+  --e-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --e-snap:   cubic-bezier(0.2, 0.9, 0.25, 1);
+  --d-fast:   240ms;
+  --d-base:   520ms;
+  --d-slow:   900ms;
+  --depth:    0;
+}
+
+/* =============================================================== frames
+   Each frame takes the shape of the image it actually holds, measured at
+   load. Nothing is cropped that was not meant to be cropped, and nothing
+   letterboxes against a colour that does not belong to the page. */
+.frame {
+  position: relative;
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  aspect-ratio: var(--ar, 1);
+  background: var(--frame-plate, var(--surface));
+}
+.frame img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+.frame[data-fit="contain"] img { object-fit: contain; }
+
+/* Padding only where an image is being shown whole, so a photograph that
+   fills its frame still bleeds to the edge. */
+.frame[data-fit="contain"] { padding: var(--frame-pad, 6%); }
+
+/* A source smaller than the frame is centred at its own size rather than
+   scaled up into mush. Several council crests are under 120px wide. */
+.frame[data-small] { display: grid; place-items: center; }
+.frame[data-small] img { width: auto; height: auto; max-width: min(100%, var(--natural-w, 100%)); max-height: 100%; }
+
+.frame[data-broken] { background: var(--surface); }
+.frame[data-broken]::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border: 1px dashed var(--line);
+}
+
+/* A lazily loaded image is not measured until it scrolls into view, so an
+   unmeasured frame must already hold roughly the right shape. Without
+   these defaults an off-screen card sat square, and because a rail sizes
+   every card to the tallest one, that single square card put empty space
+   under the text of every card beside it. */
+.frame--product  { --ar: 1; }
+.frame--cardart  { --ar: 1.34; }
+.frame--card     { --ar: 1.34; }
+.frame--plate    { --ar: 0.85; }
+.frame--cert     { --ar: 0.72; }
+.frame--sheet    { --ar: 0.95; }
+.frame--report   { --ar: 0.71; }
+.frame--photo    { --ar: 1.5; }
+.frame--service  { --ar: 1; }
+.frame--portrait { --ar: 0.75; }
+.frame:not([data-measured]) { aspect-ratio: var(--ar, 1); }
+
+/* ------------------------------------------------------------ page enter */
+html.page-in body { animation: page-fade 620ms var(--e-out) both; }
+@keyframes page-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.page-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* The drawing sheet slides away, the way a plotter sheet is pulled off. */
+html[data-transition="sheet"] .page-wipe {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 63px, color-mix(in srgb, var(--ink) 8%, transparent) 63px 64px),
+    var(--bg);
+  transform: translateY(100%);
+}
+html[data-transition="sheet"].page-out .page-wipe {
+  opacity: 1;
+  transform: translateY(0);
+  transition: transform 420ms var(--e-snap), opacity 0ms;
+}
+
+/* The water sweeps up over the page. */
+html[data-transition="wave"] .page-wipe {
+  background: linear-gradient(to top, var(--accent-2, var(--accent)), color-mix(in srgb, var(--accent) 40%, var(--bg)));
+  clip-path: ellipse(140% 100% at 50% 160%);
+  transform: translateY(100%);
+}
+html[data-transition="wave"].page-out .page-wipe {
+  opacity: 1;
+  transform: translateY(0);
+  transition: transform 460ms var(--e-out), opacity 0ms;
+}
+
+html[data-transition="fade"].page-out body {
+  opacity: 0;
+  transition: opacity 320ms var(--e-out);
+}
+
+/* --------------------------------------------------------------- reveals */
+[data-anim] {
+  will-change: transform, opacity, filter;
+  transition:
+    opacity var(--d-base) var(--e-out),
+    transform var(--d-base) var(--e-out),
+    filter var(--d-base) var(--e-out),
+    clip-path var(--d-slow) var(--e-out);
+}
+[data-anim="rise"]    { opacity: 0; transform: translate3d(0, 34px, 0); }
+[data-anim="fade"]    { opacity: 0; }
+[data-anim="blur"]    { opacity: 0; filter: blur(14px); transform: translate3d(0, 18px, 0); }
+[data-anim="scale"]   { opacity: 0; transform: scale(0.94); }
+[data-anim="slide-l"] { opacity: 0; transform: translate3d(-42px, 0, 0); }
+[data-anim="slide-r"] { opacity: 0; transform: translate3d(42px, 0, 0); }
+[data-anim="clip"]    { clip-path: inset(0 100% 0 0); }
+[data-anim="mask"]    { opacity: 0; clip-path: inset(0 0 100% 0); transform: translate3d(0, 24px, 0); }
+[data-anim="draw"]    { opacity: 0; transform: scaleX(0); transform-origin: left center; }
+
+[data-anim].in { opacity: 1; filter: none; transform: none; clip-path: inset(0 0 0 0); }
+[data-anim="draw"].in { transform: scaleX(1); }
+
+/* ------------------------------------------------------------ split type */
+.split-i {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-block: 0.08em;
+  margin-block: -0.08em;
+}
+.split-in {
+  display: inline-block;
+  transform: translate3d(0, 110%, 0);
+  opacity: 0;
+  transition: transform 880ms var(--e-out), opacity 600ms var(--e-out);
+  transition-delay: calc(var(--i) * 52ms + var(--split-delay, 0ms));
+}
+.split.in .split-in { transform: none; opacity: 1; }
+.split--chars .split-in { transition-delay: calc(var(--i) * 20ms + var(--split-delay, 0ms)); }
+
+/* --------------------------------------------------- pointer and scroll */
+[data-parallax] { transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
+[data-magnetic] { transform: translate3d(var(--mgx, 0px), var(--mgy, 0px), 0); will-change: transform; }
+[data-skew]     { transform: skewY(var(--skew, 0deg)); transition: transform 220ms var(--e-out); }
+
+[data-tilt] {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 420ms var(--e-out);
+}
+[data-tilt]:hover { transition: transform 90ms linear; }
+
+[data-spotlight] { position: relative; isolation: isolate; }
+[data-spotlight]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 340ms var(--e-out);
+  background: radial-gradient(
+    360px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    transparent 62%
+  );
+  z-index: 0;
+}
+[data-spotlight]:hover::before { opacity: 1; }
+[data-spotlight] > * { position: relative; z-index: 1; }
+
+/* --------------------------------------------------------- scroll progress */
+.scroll-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 300;
+  pointer-events: none;
+  background: var(--accent);
+  transform: scaleX(var(--sp, 0));
+  transform-origin: left center;
+}
+
+/* ------------------------------------------------------------ digit rolls */
+[data-roll] { display: inline-flex; font-variant-numeric: tabular-nums; }
+.roll-slot { display: inline-block; height: 1em; overflow: hidden; line-height: 1; }
+.roll-fixed { display: inline-block; line-height: 1; }
+.roll-strip {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(0);
+  transition: transform 1200ms var(--e-out);
+  transition-delay: calc(var(--i) * 90ms);
+}
+.roll-strip > span { height: 1em; line-height: 1; }
+[data-roll].in .roll-strip { transform: translateY(calc(var(--d) * -1em)); }
+
+/* ------------------------------------------------------------------ grain
+   On light paper this is a print texture rather than film noise, so it
+   multiplies instead of overlaying and sits much lighter. */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 400;
+  pointer-events: none;
+  opacity: 0.09;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  animation: grain-shift 800ms steps(3) infinite;
+}
+@keyframes grain-shift {
+  0%   { transform: translate3d(0, 0, 0); }
+  33%  { transform: translate3d(-2%, 1%, 0); }
+  66%  { transform: translate3d(1%, -2%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* ----------------------------------------------------------------- cursor */
+.cursor {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 500;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms var(--e-out);
+}
+.cursor.is-on { opacity: 1; }
+html.cursor-off .cursor { opacity: 0; }
+.cursor-dot, .cursor-ring {
+  position: absolute;
+  left: 0; top: 0;
+  translate: -50% -50%;
+}
+
+/* The droplet: a soft bead that swells over anything you can act on. */
+.cursor--drop .cursor-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: width 240ms var(--e-spring), height 240ms var(--e-spring);
+}
+.cursor--drop .cursor-ring {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  backdrop-filter: blur(1px);
+  transition: width 420ms var(--e-spring), height 420ms var(--e-spring), background 260ms;
+}
+.cursor--drop.is-hot .cursor-dot { width: 4px; height: 4px; }
+.cursor--drop.is-hot .cursor-ring {
+  width: 66px; height: 66px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+.cursor--drop.is-down .cursor-ring { width: 28px; height: 28px; }
+
+html.has-cursor,
+html.has-cursor a,
+html.has-cursor button { cursor: none; }
+html.has-cursor input,
+html.has-cursor textarea,
+html.has-cursor select { cursor: auto; }
+@media (pointer: coarse) { .cursor { display: none; } }
+
+/* ---------------------------------------------------------------- scanner */
+[data-scan] { position: relative; overflow: hidden; }
+[data-scan]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 48%,
+    transparent 66%
+  );
+  transform: translateX(-120%);
+}
+[data-scan].scanned::after { animation: scan-pass 1400ms var(--e-out) 120ms 1 both; }
+@keyframes scan-pass {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(120%); }
+}
+
+/* ---------------------------------------------------------------- marquee */
+.marquee-track { display: flex; width: max-content; will-change: transform; }
+
+/* ============================================== the blueprint, self-drawn
+   Every drawn element carries pathLength="1", so one pair of rules issues
+   a rectangle, a line and a curve in exactly the same way. */
+.bp { display: block; width: 100%; height: auto; overflow: visible; }
+
+.bp-draw {
+  fill: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 900ms var(--e-out);
+}
+.bp.is-drawn .bp-draw { stroke-dashoffset: 0; }
+
+.bp-fade { opacity: 0; transition: opacity 700ms var(--e-out); }
+.bp.is-drawn .bp-fade { opacity: 1; }
+
+/* A model change re-issues the sheet: the dimensions pulse rather than
+   redrawing from nothing, which would read as a page reload. */
+.bp.is-redraw .bp-dim-line { animation: dim-reissue 620ms var(--e-out); }
+.bp.is-redraw .bp-dim-text { animation: dim-figure 620ms var(--e-out); }
+@keyframes dim-reissue {
+  0%   { stroke-dashoffset: 1; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes dim-figure {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* The travelling dash that shows the direction of flow. */
+.bp-runner {
+  fill: none;
+  stroke-dasharray: 5 13;
+  animation: runner 1.6s linear infinite;
+}
+@keyframes runner { to { stroke-dashoffset: -18; } }
+
+/* -------------------------------------------------------------- utilities */
+.rule {
+  height: 1px;
+  background: var(--line);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 900ms var(--e-out);
+}
+.rule.in { transform: scaleX(1); }
+
+/* ------------------------------------------------------- reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-anim], [data-anim].in { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; }
+  .split-in { opacity: 1 !important; transform: none !important; }
+  [data-skew] { transform: none !important; }
+  .bp-draw { stroke-dashoffset: 0 !important; }
+  .bp-fade { opacity: 1 !important; }
+  .grain, .cursor, .page-wipe { display: none; }
+  html.has-cursor, html.has-cursor a, html.has-cursor button { cursor: auto; }
+}
+
+/* The sheet scales as one image, so on a phone its ten pixel annotation
+   would render at four. The interior callouts drop out and what is left is
+   set large enough to survive the reduction: at that size a drawing should
+   show form, not labelling. */
+@media (max-width: 760px) {
+  .bp-note:not(.is-num) { display: none; }
+  .bp-note.is-num { font-size: 26px; }
+  .bp-dim-text { font-size: 26px; }
+  .bp-dim line { stroke-width: 2; }
+  .bp-marks { display: none; }
+}
+
+/* A label sitting on hatching needs to knock the hatching out behind it.
+   paint-order draws the halo first, so the glyphs stay crisp. */
+.bp-note.is-fog {
+  paint-order: stroke fill;
+  stroke: #FFFFFF;
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+  font-size: 9.5px;
+}

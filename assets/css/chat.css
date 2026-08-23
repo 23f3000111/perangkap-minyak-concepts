@@ -1,0 +1,380 @@
+/* =========================================================================
+   Perangkap Minyak - the assistant panel
+
+   One widget, two sites. Colour comes from the host stylesheet through the
+   four tokens below and nothing here picks a palette of its own, so the
+   panel reads as part of whichever site it is dropped into.
+
+   Expected from the host, all with fallbacks:
+     --chat-accent  --chat-accent-deep  --chat-ink  --chat-line  --chat-surface
+   ========================================================================= */
+
+.pmchat {
+  --c-accent:  var(--chat-accent, #0B6623);
+  --c-deep:    var(--chat-accent-deep, #07491A);
+  /* A host may want the accent to fill shapes without also colouring type.
+     Falls back to the accent, so a site that has not asked is unchanged. */
+  --c-ink-act: var(--chat-accent-text, var(--chat-accent, #0B6623));
+  --c-ink:     var(--chat-ink, #16211A);
+  --c-body:    var(--chat-body, #4F5B54);
+  --c-line:    var(--chat-line, #E1E9E3);
+  --c-surface: var(--chat-surface, #FFFFFF);
+  --c-wash:    var(--chat-wash, #F3F8F4);
+  --c-radius:  var(--chat-radius, 14px);
+
+  position: fixed;
+  right: clamp(14px, 2.4vw, 26px);
+  bottom: clamp(14px, 2.4vw, 26px);
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  font-family: var(--sans, system-ui, sans-serif);
+
+  /* The container is as tall as the panel it will hold - around 700px -
+     and it is anchored to the bottom right, so its box reaches all the way
+     up past the header and swallowed every click on the right hand end of
+     the navigation. It is a positioning shell and nothing more, so it
+     takes no pointer events; its children take their own back. A closed
+     panel is visibility:hidden and so stays out of the way regardless. */
+  pointer-events: none;
+}
+.pmchat > * { pointer-events: auto; }
+
+/* ---------------------------------------------------------- the launcher */
+.pmchat-launch {
+  order: 3;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--c-accent);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.45);
+  transition: background 200ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pmchat-launch:hover { background: var(--c-deep); transform: translateY(-2px); }
+.pmchat-launch i { grid-area: 1 / 1; transition: opacity 160ms ease, transform 200ms ease; }
+.pmchat-launch-close { opacity: 0; transform: rotate(-40deg) scale(0.7); }
+.pmchat[data-open="true"] .pmchat-launch-open { opacity: 0; transform: rotate(40deg) scale(0.7); }
+.pmchat[data-open="true"] .pmchat-launch-close { opacity: 1; transform: none; }
+
+/* A single unread pip, so the launcher reads as waiting rather than idle. */
+.pmchat-launch::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--c-surface);
+  border-radius: 50%;
+  background: #E8A33D;
+  transition: opacity 200ms ease;
+}
+.pmchat[data-open="true"] .pmchat-launch::after { opacity: 0; }
+
+/* ------------------------------------------------------------ the teaser */
+.pmchat-teaser {
+  order: 2;
+  max-width: 240px;
+  padding: 11px 15px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--c-radius) var(--c-radius) 4px var(--c-radius);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.4);
+  animation: pmchat-pop 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pmchat-teaser[hidden] { display: none; }
+.pmchat-teaser:hover { border-color: var(--c-accent); }
+.pmchat[data-open="true"] .pmchat-teaser { display: none; }
+
+@keyframes pmchat-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------- the panel */
+.pmchat-panel {
+  order: 1;
+  width: min(92vw, 392px);
+  height: min(74vh, 620px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--c-line);
+  border-radius: var(--c-radius);
+  background: var(--c-surface);
+  box-shadow: 0 28px 70px -24px rgba(0, 0, 0, 0.5);
+  transform-origin: bottom right;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px) scale(0.97);
+  transition: opacity 220ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1), visibility 260ms;
+}
+.pmchat[data-open="true"] .pmchat-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+/* --- head --- */
+.pmchat-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: none;
+  padding: 13px 14px;
+  background: var(--c-accent);
+  color: #fff;
+}
+.pmchat-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.pmchat-id { display: grid; min-width: 0; line-height: 1.3; }
+.pmchat-name { font-size: 0.95rem; font-weight: 600; }
+.pmchat-role { font-size: 0.72rem; opacity: 0.82; }
+.pmchat-tools { display: flex; gap: 2px; margin-left: auto; }
+.pmchat-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.pmchat-icon:hover { background: rgba(255, 255, 255, 0.16); }
+
+/* --- log --- */
+.pmchat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 14px 8px;
+  background: var(--c-wash);
+  scrollbar-width: thin;
+}
+.pmchat-log::-webkit-scrollbar { width: 8px; }
+.pmchat-log::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--c-line);
+  background-clip: content-box;
+}
+
+.pmchat-row { display: flex; margin-bottom: 9px; }
+.pmchat-row--bot { justify-content: flex-start; }
+.pmchat-row--you { justify-content: flex-end; }
+
+.pmchat-bubble {
+  max-width: 86%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  animation: pmchat-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pmchat-bubble p { margin: 0; }
+.pmchat-row--bot .pmchat-bubble {
+  border: 1px solid var(--c-line);
+  border-bottom-left-radius: 4px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+}
+.pmchat-row--you .pmchat-bubble {
+  border-bottom-right-radius: 4px;
+  background: var(--c-accent);
+  color: #fff;
+}
+
+@keyframes pmchat-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --- typing --- */
+.pmchat-dots { display: inline-flex; gap: 4px; padding: 3px 0; }
+.pmchat-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-body);
+  opacity: 0.4;
+  animation: pmchat-blink 1.1s infinite ease-in-out;
+}
+.pmchat-dots i:nth-child(2) { animation-delay: 0.16s; }
+.pmchat-dots i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes pmchat-blink {
+  0%, 60%, 100% { opacity: 0.28; transform: none; }
+  30%           { opacity: 0.9;  transform: translateY(-3px); }
+}
+
+/* --- cards --- */
+.pmchat-card {
+  min-width: 236px;
+  margin: -2px -3px;
+}
+.pmchat-card-t {
+  margin: 0 0 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-ink-act);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pmchat-card-dl {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+}
+.pmchat-card-dl dt { color: var(--c-body); }
+.pmchat-card-dl dd {
+  margin: 0;
+  color: var(--c-ink);
+  text-align: right;
+}
+.pmchat-card-dl dd.is-fig {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+.pmchat-card-act { display: flex; flex-wrap: wrap; gap: 6px; }
+.pmchat-act {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 11px;
+  border: 1px solid var(--c-ink-act);
+  border-radius: 999px;
+  background: none;
+  color: var(--c-ink-act);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+.pmchat-act:hover { background: var(--c-ink-act); color: #fff; text-decoration: none; }
+
+/* --- foot --- */
+.pmchat-foot {
+  flex: none;
+  border-top: 1px solid var(--c-line);
+  background: var(--c-surface);
+}
+.pmchat-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 12px 0;
+  scrollbar-width: none;
+}
+.pmchat-chips::-webkit-scrollbar { display: none; }
+.pmchat-chips:empty { display: none; }
+.pmchat-chip {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-wash);
+  color: var(--c-ink);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+.pmchat-chip:hover {
+  border-color: var(--c-accent);
+  background: var(--c-accent);
+  color: #fff;
+}
+
+.pmchat-compose { display: flex; align-items: center; gap: 8px; padding: 10px 12px 12px; }
+.pmchat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-wash);
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 0.85rem;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.pmchat-input:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  background: var(--c-surface);
+}
+.pmchat-send {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--c-accent);
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.pmchat-send:hover { background: var(--c-deep); }
+
+/* An overlay is open on the host page: the launcher gets out of its way
+   rather than floating on top of a drawer or a lightbox. */
+body.nav-locked .pmchat {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+/* --------------------------------------------------------------- mobile */
+@media (max-width: 520px) {
+  .pmchat { right: 12px; bottom: 12px; left: 12px; align-items: flex-end; }
+  .pmchat-panel { width: 100%; height: min(78vh, 560px); }
+  .pmchat-teaser { max-width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmchat-launch,
+  .pmchat-launch i,
+  .pmchat-panel,
+  .pmchat-bubble,
+  .pmchat-teaser,
+  .pmchat-dots i { transition: none; animation: none; }
+  .pmchat-launch:hover { transform: none; }
+}
