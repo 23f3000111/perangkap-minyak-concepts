@@ -71,8 +71,8 @@
     var want = {
       '--navy': '#0B2C53', '--navy-deep': '#071F3C', '--navy-soft': '#16406F',
       '--ink': '#16233A', '--steel': '#5B6B80', '--hairline': '#DCE3EC',
-      '--surface': '#FFFFFF', '--wash': '#EEF6EF', '--wash-cool': '#F2F6FA',
-      '--green': '#1A7F3E', '--green-deep': '#146637', '--green-bright': '#23A455',
+      '--surface': '#FFFFFF', '--wash': '#E9F1FA', '--wash-cool': '#F5F8FC',
+      '--blue': '#1B5FA8', '--blue-deep': '#123F73', '--blue-bright': '#4A9BE8',
       '--gold': '#C9922B', '--danger': '#C0392B'
     };
     Object.keys(want).forEach(function (k) {

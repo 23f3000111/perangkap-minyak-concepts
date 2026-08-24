@@ -74,7 +74,7 @@
 
   APP.ui.pill = function (opts) {
     opts = opts || {};
-    var attrs = { class: 'pill pill--' + (opts.tone || 'green') };
+    var attrs = { class: 'pill pill--' + (opts.tone || 'accent') };
     if (opts.magnetic) attrs['data-magnetic'] = '';
     if (opts.href) {
       var target = opts.raw ? opts.href : APP.ui.href(opts.href, opts.label);
@@ -229,7 +229,7 @@
       copy.appendChild(el('p', Object.assign({ class: 'lead' }, labelAttrs(para))));
     });
     if (opts.cta) {
-      copy.appendChild(APP.ui.pill({ href: opts.cta.href, label: opts.cta.label, tone: 'green' }));
+      copy.appendChild(APP.ui.pill({ href: opts.cta.href, label: opts.cta.label, tone: 'accent' }));
     }
     section.body.appendChild(el('div', { class: 'lead-grid', 'data-anim': 'rise' }, [
       el('div', { class: 'lead-side' }, [opts.eyebrow ? APP.ui.eyebrow(opts.eyebrow) : null]),
@@ -239,7 +239,7 @@
   };
 
   /* ----------------------------------------------------- S2 the statement
-     One sentence, with the load-bearing phrases in green. Built by walking
+     One sentence, with the load-bearing phrases in blue. Built by walking
      the sentence and pushing text nodes, so nothing is ever parsed as HTML. */
   APP.blocks.statement = function (opts) {
     opts = opts || {};
@@ -272,16 +272,16 @@
   /* ----------------------------------------------------------- S11 the CTA */
   APP.blocks.cta = function (opts) {
     opts = opts || {};
-    var tone = opts.tone || 'green';
+    var tone = opts.tone || 'accent';
     var section = APP.blocks._band('cta', Object.assign({}, opts, {
-      tone: tone === 'green' ? null : tone
+      tone: tone === 'accent' ? null : tone
     }));
-    if (tone === 'green') section.classList.add('is-green');
+    if (tone === 'accent') section.classList.add('is-accent');
 
     var controls = el('div', { class: 'cta-controls' });
     if (opts.primary) {
       controls.appendChild(APP.ui.pill({
-        href: opts.primary.href, label: opts.primary.label, tone: 'green', magnetic: true
+        href: opts.primary.href, label: opts.primary.label, tone: 'accent', magnetic: true
       }));
     }
     if (opts.whatsapp) {
@@ -514,7 +514,7 @@
       ctaSlot.textContent = '';
       if (s.cta) {
         ctaSlot.appendChild(APP.ui.pill({
-          href: s.cta.href, label: s.cta.label, tone: 'green', magnetic: true, raw: s.cta.raw
+          href: s.cta.href, label: s.cta.label, tone: 'accent', magnetic: true, raw: s.cta.raw
         }));
       }
 
@@ -626,7 +626,7 @@
       if (it.img) pPhoto.appendChild(APP.ui.photo(it.img, it.alt, it.frame || null));
       pCta.textContent = '';
       if (it.cta) {
-        pCta.appendChild(APP.ui.pill({ href: it.cta.href, label: it.cta.label, tone: 'green' }));
+        pCta.appendChild(APP.ui.pill({ href: it.cta.href, label: it.cta.label, tone: 'accent' }));
       }
       PM.frames(pPhoto);
       PM.motion.enhance(panel);
@@ -885,7 +885,7 @@
       dl.appendChild(v);
     });
 
-    var specLink = APP.ui.pill({ href: 'model-finder.html', label: S.ui.specs, tone: 'green' });
+    var specLink = APP.ui.pill({ href: 'model-finder.html', label: S.ui.specs, tone: 'accent' });
     var right = el('div', { class: 'sizer-spec' }, [
       APP.ui.arc('tr'), code, dl, specLink
     ]);
@@ -1173,7 +1173,7 @@
     });
     inner.appendChild(el('div', { class: 'sheet-foot' }, [
       langToggle(),
-      APP.ui.pill({ href: 'contact.html#enquiry', label: S.ui.requestQuote, tone: 'green' })
+      APP.ui.pill({ href: 'contact.html#enquiry', label: S.ui.requestQuote, tone: 'accent' })
     ]));
     return el('div', { class: 'hdr-sheet', id: 'navsheet', 'data-nav-panel': '' }, [inner]);
   }
@@ -1194,7 +1194,7 @@
       navTree(),
       el('div', { class: 'hdr-side' }, [
         langToggle(),
-        APP.ui.pill({ href: 'contact.html#enquiry', label: S.ui.requestQuote, tone: 'green', magnetic: true }),
+        APP.ui.pill({ href: 'contact.html#enquiry', label: S.ui.requestQuote, tone: 'accent', magnetic: true }),
         burger
       ])
     ]));
@@ -2481,7 +2481,7 @@
       }),
       field({ name: 'message', label: S.ui.message, tag: 'textarea' }),
       el('div', { class: 'form-foot' }, [
-        el('button', Object.assign({ class: 'pill pill--green', type: 'submit' }, labelAttrs(S.ui.submit))),
+        el('button', Object.assign({ class: 'pill pill--accent', type: 'submit' }, labelAttrs(S.ui.submit))),
         el('a', {
           class: 'pill pill--ghost', href: PM.waLink(), target: '_blank', rel: 'noopener'
         }, [el('span', labelAttrs(S.ui.whatsapp)), APP.ui.icon('ph-whatsapp-logo')])

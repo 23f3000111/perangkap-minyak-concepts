@@ -1,6 +1,6 @@
 /* =========================================================================
    Site D - "Waterline"
-   Navy base, green action colour, one arc motif. Light only.
+   Navy base, blue action colour, one arc motif. Light only.
    Section order: tokens / reset+base / chassis / blocks / responsive
    ========================================================================= */
 
@@ -13,18 +13,26 @@
   --steel:        #5B6B80;
   --hairline:     #DCE3EC;
   --surface:      #FFFFFF;
-  --wash:         #EEF6EF;
-  --wash-cool:    #F2F6FA;
-  --green:        #1A7F3E;
-  --green-deep:   #146637;
-  --green-bright: #23A455;
+  /* Both washes are blue now. The warmer one tints a band, the cooler one
+     backs a plate, and they are far enough apart in value to still read as
+     two different grounds. */
+  --wash:         #E9F1FA;
+  --wash-cool:    #F5F8FC;
 
-  /* Green fills things; it does not colour words. Anything that has to
-     read as active in type takes one of these instead: blue on a light
-     ground, white or pale blue on a dark one. --link is checked against
-     white at 5.9:1 and --link-strong at 9.4:1. */
-  --link:         #1B5FA8;
-  --link-strong:  #123F73;
+  /* The action colour. Site C is the green concept; this one is blue, so
+     the two directions stop arguing over the same accent. Blue fills a
+     shape and blue colours a word - one family does both.
+       --blue        white on it at 6.5:1
+       --blue-deep   white on it at 10.8:1
+       --blue-bright on navy at 4.6:1, for accents on a dark ground */
+  --blue:         #1B5FA8;
+  --blue-deep:    #123F73;
+  --blue-bright:  #4A9BE8;
+
+  /* Kept as names for the job rather than the colour, so type rules read
+     as intent. */
+  --link:         var(--blue);
+  --link-strong:  var(--blue-deep);
   --on-navy-soft: #A9CBF2;
   --gold:         #C9922B;
   --danger:       #C0392B;
@@ -92,14 +100,14 @@ button { font: inherit; color: inherit; }
 .wrap--wide { width: min(100% - 2 * var(--s3), var(--wrap-wide)); margin-inline: auto; }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
 
 .skip {
   position: absolute; left: -9999px; top: 0; z-index: 100;
-  background: var(--green); color: #fff; padding: var(--s2) var(--s3);
+  background: var(--blue); color: #fff; padding: var(--s2) var(--s3);
 }
 .skip:focus { left: 0; }
 
@@ -109,7 +117,7 @@ button { font: inherit; color: inherit; }
 }
 
 /* The shared scroll progress bar, recoloured for this site. */
-.scroll-progress { background: var(--green-bright); }
+.scroll-progress { background: var(--blue-bright); }
 
 /* ------------------------------------------------------------------ pill */
 .pill {
@@ -123,8 +131,8 @@ button { font: inherit; color: inherit; }
 .pill i { font-size: 1.05em; transition: transform 240ms var(--e-out); }
 .pill:hover i { transform: translateX(3px); }
 
-.pill--green { background: var(--green); color: #fff; }
-.pill--green:hover, .pill--green:focus-visible { background: var(--green-deep); color: #fff; }
+.pill--accent { background: var(--blue); color: #fff; }
+.pill--accent:hover, .pill--accent:focus-visible { background: var(--blue-deep); color: #fff; }
 
 .pill--navy { background: var(--navy); color: #fff; }
 .pill--navy:hover { background: var(--navy-deep); }
@@ -132,15 +140,15 @@ button { font: inherit; color: inherit; }
 .pill--ghost { background: transparent; color: var(--navy); border-color: var(--hairline); }
 .pill--ghost:hover { border-color: var(--link); color: var(--link); }
 
-/* On a navy or green ground the ghost pill inverts. */
-.is-navy .pill--ghost, .band--cta.is-green .pill--ghost {
+/* On a navy or accent ground the ghost pill inverts. */
+.is-navy .pill--ghost, .band--cta.is-accent .pill--ghost {
   color: #fff; border-color: rgba(255, 255, 255, 0.42);
 }
-.is-navy .pill--ghost:hover, .band--cta.is-green .pill--ghost:hover {
+.is-navy .pill--ghost:hover, .band--cta.is-accent .pill--ghost:hover {
   border-color: #fff; background: rgba(255, 255, 255, 0.10); color: #fff;
 }
-.band--cta.is-green .pill--green { background: #fff; color: var(--link-strong); }
-.band--cta.is-green .pill--green:hover { background: var(--wash); color: var(--link-strong); }
+.band--cta.is-accent .pill--accent { background: #fff; color: var(--link-strong); }
+.band--cta.is-accent .pill--accent:hover { background: var(--wash); color: var(--link-strong); }
 
 @media (prefers-reduced-motion: reduce) {
   .pill, .pill i { transition: none; }
@@ -189,7 +197,7 @@ button { font: inherit; color: inherit; }
 .hdr-lnk i { font-size: 0.85em; color: var(--steel); transition: transform 200ms var(--e-out); }
 .hdr-lnk::after {
   content: ''; position: absolute; left: 14px; right: 14px; bottom: 6px; height: 2px;
-  background: var(--green); transform: scaleX(0); transform-origin: left;
+  background: var(--blue); transform: scaleX(0); transform-origin: left;
   transition: transform 240ms var(--e-out);
 }
 .hdr-lnk:hover::after,
@@ -199,7 +207,7 @@ button { font: inherit; color: inherit; }
 
 .hdr-group.has-current > .hdr-lnk::before {
   content: ''; width: 5px; height: 5px; border-radius: 50%;
-  background: var(--green); margin-right: 2px;
+  background: var(--blue); margin-right: 2px;
 }
 
 .hdr-mega {
@@ -351,9 +359,9 @@ body.nav-locked { overflow: hidden; }
   font-size: 0.78rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
   color: var(--link);
 }
-.eyebrow-mark { width: 8px; height: 8px; background: var(--green); border-radius: 2px; flex: 0 0 auto; }
+.eyebrow-mark { width: 8px; height: 8px; background: var(--blue); border-radius: 2px; flex: 0 0 auto; }
 .is-navy .eyebrow { color: var(--on-navy-soft); }
-.is-navy .eyebrow-mark { background: var(--green-bright); }
+.is-navy .eyebrow-mark { background: var(--blue-bright); }
 
 /* ------------------------------------------------------- circular arrow */
 .circ {
@@ -385,9 +393,9 @@ body.nav-locked { overflow: hidden; }
   position: relative; overflow: hidden;
   background: var(--wash); border-radius: var(--r-lg); padding: var(--s4);
 }
-.fig-card > .arc::before { background: var(--green); }
+.fig-card > .arc::before { background: var(--blue); }
 .is-navy .fig-card { background: var(--navy-soft); }
-.is-navy .fig-card > .arc::before { background: var(--green-bright); }
+.is-navy .fig-card > .arc::before { background: var(--blue-bright); }
 .fig-num {
   position: relative; z-index: 1; display: block;
   font-family: var(--mono); font-variant-numeric: tabular-nums;
@@ -445,11 +453,14 @@ body.nav-locked { overflow: hidden; }
   position: fixed; right: 94px; bottom: 22px; z-index: 80;
   width: 56px; height: 56px; border-radius: 50%;
   display: grid; place-items: center; text-decoration: none;
-  background: var(--green); color: #fff; font-size: 1.7rem;
+  /* WhatsApp's own brand green, not the site's accent. It is naming a
+     service, and a WhatsApp button in any other colour is a puzzle. This is
+     the only green left on Site D. */
+  background: #25D366; color: #fff; font-size: 1.7rem;
   box-shadow: var(--lift);
   transition: background 200ms var(--e-out), transform 200ms var(--e-out);
 }
-.wa-float:hover { background: var(--green-deep); transform: translateY(-2px); }
+.wa-float:hover { background: #1EB558; transform: translateY(-2px); }
 @media (prefers-reduced-motion: reduce) { .wa-float { transition: none; } }
 
 @media (max-width: 1080px) {
@@ -491,9 +502,9 @@ body.nav-locked { overflow: hidden; }
 .em { font-style: normal; font-weight: 600; color: var(--link); }
 
 /* ---------------------------------------------------------- S11 the CTA */
-.band--cta.is-green { background: var(--green); --arc-bg: var(--green); color: #fff; }
-.band--cta.is-green h2 { color: #fff; }
-.band--cta.is-green .lead { color: rgba(255, 255, 255, 0.86); }
+.band--cta.is-accent { background: var(--blue); --arc-bg: var(--blue); color: #fff; }
+.band--cta.is-accent h2 { color: #fff; }
+.band--cta.is-accent .lead { color: rgba(255, 255, 255, 0.86); }
 .cta-in {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
   gap: var(--s4);
@@ -542,7 +553,7 @@ body.nav-locked { overflow: hidden; }
 .tile-lbl { display: grid; gap: 4px; }
 .tile-name { color: #fff; font-weight: 600; font-size: 1.08rem; line-height: 1.25; }
 .tile-note { color: rgba(255, 255, 255, 0.72); font-size: 0.85rem; line-height: 1.4; }
-.tile:hover .circ { background: var(--green); color: #fff; }
+.tile:hover .circ { background: var(--blue); color: #fff; }
 
 @media (prefers-reduced-motion: reduce) {
   .tile, .tile .photo img, .circ { transition: none; }
@@ -593,7 +604,7 @@ body.nav-locked { overflow: hidden; }
   content: ''; position: absolute; right: -8%; bottom: -30%; z-index: 1;
   width: 62%; aspect-ratio: 1; border-radius: 50%;
   background: radial-gradient(circle at 40% 40%,
-    rgba(35, 164, 85, 0.26), rgba(35, 164, 85, 0) 62%);
+    rgba(74, 155, 232, 0.30), rgba(74, 155, 232, 0) 62%);
 }
 
 .hero-inner {
@@ -610,7 +621,7 @@ body.nav-locked { overflow: hidden; }
 .hero-copy h1 { color: #fff; text-wrap: balance; }
 .hero-copy .lead { color: rgba(255, 255, 255, 0.82); max-width: 46ch; }
 .hero-copy .eyebrow { color: var(--on-navy-soft); }
-.hero-copy .eyebrow-mark { background: var(--green-bright); }
+.hero-copy .eyebrow-mark { background: var(--blue-bright); }
 
 /* The product, on a card that reads as an object on the photograph rather
    than as the other half of a split. */
@@ -639,7 +650,7 @@ body.nav-locked { overflow: hidden; }
 }
 .hero-card-tag::before {
   content: ''; width: 7px; height: 7px; border-radius: 2px;
-  background: var(--green-bright);
+  background: var(--blue-bright);
 }
 /* The arc masks the seam between the panel and the photograph. */
 
@@ -660,7 +671,7 @@ body.nav-locked { overflow: hidden; }
 .hero-links a:hover { color: #fff; text-decoration: underline; }
 .hero-dotmark {
   width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
-  border: 1.5px solid var(--green-bright);
+  border: 1.5px solid var(--blue-bright);
 }
 
 .hero-nav { display: flex; align-items: center; gap: var(--s3); margin-top: 4px; }
@@ -670,7 +681,7 @@ body.nav-locked { overflow: hidden; }
 }
 .hero-rail-fill {
   position: absolute; inset: 0; transform-origin: left; transform: scaleX(0);
-  background: var(--green-bright);
+  background: var(--blue-bright);
 }
 @keyframes heroRail { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .hero-dots { display: flex; gap: 8px; }
@@ -679,7 +690,7 @@ body.nav-locked { overflow: hidden; }
   border: 1px solid rgba(255, 255, 255, 0.55); background: none;
   transition: background 200ms var(--e-out), border-color 200ms var(--e-out);
 }
-.hero-dot[aria-current="true"] { background: var(--green-bright); border-color: var(--green-bright); }
+.hero-dot[aria-current="true"] { background: var(--blue-bright); border-color: var(--blue-bright); }
 
 /* The ground drifts, very slowly. The card does not: a product photograph
    that will not hold still is harder to read, not more alive. */
@@ -717,10 +728,10 @@ body.nav-locked { overflow: hidden; }
 }
 .exp-card:hover .exp-plus,
 .exp-card:focus-visible .exp-plus {
-  background: var(--green); border-color: var(--green); color: #fff;
+  background: var(--blue); border-color: var(--blue); color: #fff;
 }
 .exp-card[aria-expanded="true"] .exp-plus {
-  background: var(--green); border-color: var(--green); color: #fff;
+  background: var(--blue); border-color: var(--blue); color: #fff;
   transform: rotate(45deg);
 }
 .exp-card:hover .exp-title { color: var(--link); }
@@ -790,7 +801,7 @@ body.nav-locked { overflow: hidden; }
 .car-foot { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s3); }
 .car-rail { position: relative; flex: 1; height: 2px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
 .car-rail-fill {
-  position: absolute; inset: 0; background: var(--green-bright);
+  position: absolute; inset: 0; background: var(--blue-bright);
   transform-origin: left; transform: scaleX(var(--p, 0));
   transition: transform 160ms linear;
 }
@@ -801,7 +812,7 @@ body.nav-locked { overflow: hidden; }
   cursor: pointer; font-size: 1.05rem;
   transition: background 200ms var(--e-out), border-color 200ms var(--e-out);
 }
-.car-btn:hover { background: var(--green); border-color: var(--green); }
+.car-btn:hover { background: var(--blue); border-color: var(--blue); }
 
 /* --------------------------------------------------------- S8 the media */
 .band--media { padding-block: var(--s3); }
@@ -829,11 +840,11 @@ body.nav-locked { overflow: hidden; }
 .media-cap { position: absolute; inset: auto 0 0 0; z-index: 2; padding: clamp(var(--s3), 4vw, var(--s5)); }
 .media-cap h2 { color: #fff; max-width: 18ch; }
 .media-cap .eyebrow { color: var(--on-navy-soft); }
-.media-cap .eyebrow-mark { background: var(--green-bright); }
+.media-cap .eyebrow-mark { background: var(--blue-bright); }
 
 /* --------------------------------------------------------- S9 the quote */
 .quote { margin: 0; max-width: 860px; }
-.quote-rule { display: block; width: 64px; height: 3px; background: var(--green-bright); margin-bottom: var(--s3); }
+.quote-rule { display: block; width: 64px; height: 3px; background: var(--blue-bright); margin-bottom: var(--s3); }
 .quote blockquote {
   margin: 0; color: #fff; font-size: clamp(1.3rem, 2.4vw, 1.9rem);
   line-height: 1.4; font-weight: 500; letter-spacing: -0.01em;
@@ -888,20 +899,20 @@ body.nav-locked { overflow: hidden; }
 .sizer-range::-webkit-slider-runnable-track {
   height: 6px; border-radius: 3px;
   background: linear-gradient(to right,
-    var(--green) 0 calc(var(--pct, 0) * 100%),
+    var(--blue) 0 calc(var(--pct, 0) * 100%),
     var(--hairline) calc(var(--pct, 0) * 100%) 100%);
 }
 .sizer-range::-moz-range-track { height: 6px; border-radius: 3px; background: var(--hairline); }
-.sizer-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--green); }
+.sizer-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--blue); }
 .sizer-range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 22px; height: 22px; border-radius: 50%; margin-top: -8px;
-  background: var(--green); border: 3px solid #fff;
+  background: var(--blue); border: 3px solid #fff;
   box-shadow: 0 2px 8px -2px rgba(11, 44, 83, 0.5);
 }
 .sizer-range::-moz-range-thumb {
   width: 22px; height: 22px; border-radius: 50%;
-  background: var(--green); border: 3px solid #fff;
+  background: var(--blue); border: 3px solid #fff;
 }
 .sizer-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.75rem; }
 
@@ -911,13 +922,13 @@ body.nav-locked { overflow: hidden; }
 }
 .sizer-level-fill {
   position: absolute; inset: auto 0 0 0; height: calc(var(--fill, 0.2) * 100%);
-  background: linear-gradient(to bottom, var(--green-bright), var(--green));
+  background: linear-gradient(to bottom, var(--blue-bright), var(--blue));
   transition: height 260ms var(--e-out);
 }
 .sizer-level-arc {
   position: absolute; top: 0; left: -10%; width: 120%; height: 16px;
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-  background: var(--green-bright); transform: translateY(-46%);
+  background: var(--blue-bright); transform: translateY(-46%);
 }
 
 .sizer-spec {
@@ -927,7 +938,7 @@ body.nav-locked { overflow: hidden; }
   display: grid; align-content: start; gap: var(--s3);
 }
 .sizer-spec > * { position: relative; z-index: 1; }
-.sizer-spec .arc--tr::before { background: var(--green-bright); opacity: 0.14; }
+.sizer-spec .arc--tr::before { background: var(--blue-bright); opacity: 0.14; }
 .sizer-model {
   color: #fff; font-size: clamp(2rem, 4vw, 2.9rem);
   font-weight: 500; letter-spacing: -0.02em; line-height: 1;
@@ -959,7 +970,7 @@ body.nav-locked { overflow: hidden; }
   transition: background 180ms var(--e-out), border-color 180ms var(--e-out), color 180ms var(--e-out);
 }
 .chip:hover { border-color: var(--link); color: var(--link); }
-.chip[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.chip[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
 .meal-find { display: flex; align-items: center; gap: 10px; }
 .meal-input {
   width: 120px; padding: 9px 12px; border: 1px solid var(--hairline);
@@ -977,7 +988,7 @@ body.nav-locked { overflow: hidden; }
 }
 .spec-table td { padding: 13px var(--s2); border-bottom: 1px solid var(--hairline); vertical-align: top; }
 .spec-table tbody tr:nth-child(even) { background: var(--wash-cool); }
-.spec-table tbody tr.is-match { background: var(--wash); box-shadow: inset 3px 0 0 var(--green); }
+.spec-table tbody tr.is-match { background: var(--wash); box-shadow: inset 3px 0 0 var(--blue); }
 .spec-table td.fig { white-space: nowrap; }
 .spec-table a { color: var(--link); font-weight: 600; text-decoration: none; }
 .spec-table a:hover { text-decoration: underline; }
@@ -1070,7 +1081,7 @@ body.nav-locked { overflow: hidden; }
 .tile--plate .tile-name { color: var(--navy); }
 .tile--plate .tile-note { color: var(--steel); }
 .tile--plate .circ { background: var(--wash); color: var(--navy); }
-.tile--plate:hover .circ { background: var(--green); color: #fff; }
+.tile--plate:hover .circ { background: var(--blue); color: #fff; }
 .tile--plate:hover img { transform: none; }
 
 /* Where a photo is used as a full-bleed fill, the measured frame must give
@@ -1097,7 +1108,7 @@ body.nav-locked { overflow: hidden; }
 .bullets li { position: relative; padding-left: 26px; }
 .bullets li::before {
   content: ''; position: absolute; left: 0; top: 0.55em;
-  width: 8px; height: 8px; border-radius: 2px; background: var(--green);
+  width: 8px; height: 8px; border-radius: 2px; background: var(--blue);
 }
 .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin: var(--s3) 0; }
 .badge {
@@ -1177,11 +1188,11 @@ body.nav-locked { overflow: hidden; }
 
 /* -------------------------------------------------------- the assistant
    The shared panel reads its colour from these names. Navy is too heavy
-   for a chat surface, so the action green leads and navy is kept for the
+   for a chat surface, so the action blue leads and navy is kept for the
    type. */
 .pmchat {
-  --chat-accent:      var(--green);
-  --chat-accent-deep: var(--green-deep);
+  --chat-accent:      var(--blue);
+  --chat-accent-deep: var(--blue-deep);
   --chat-accent-text: var(--link);
   --chat-ink:         var(--navy);
   --chat-body:        var(--steel);
@@ -1223,7 +1234,7 @@ body.nav-locked { overflow: hidden; }
   background: var(--hairline); cursor: pointer;
   transition: background 200ms var(--e-out);
 }
-.banner-dot[aria-current="true"] { background: var(--green); }
+.banner-dot[aria-current="true"] { background: var(--blue); }
 
 @media (max-width: 700px) {
   /* At this width a 3:1 banner is 120px tall and the type inside it is
@@ -1274,7 +1285,7 @@ body.nav-locked { overflow: hidden; }
 .vid-card .vid-frame { border-radius: var(--r-md); }
 .vid-card h3 { font-size: 1rem; }
 .vid-card[aria-current="true"] h3 { color: var(--link); }
-.vid-card[aria-current="true"] .vid-frame { outline: 2px solid var(--green); outline-offset: 3px; }
+.vid-card[aria-current="true"] .vid-frame { outline: 2px solid var(--blue); outline-offset: 3px; }
 
 @media (max-width: 980px) {
   .vid-feature { grid-template-columns: 1fr; }
@@ -1294,7 +1305,7 @@ body.nav-locked { overflow: hidden; }
   background: var(--surface); text-align: center;
   transition: border-color 200ms var(--e-out), transform 200ms var(--e-out);
 }
-.doc-item:hover { border-color: var(--green); transform: translateY(-3px); }
+.doc-item:hover { border-color: var(--blue); transform: translateY(-3px); }
 .doc-item .frame { background: var(--surface); }
 .doc-item figcaption { font-size: 0.84rem; color: var(--steel); line-height: 1.4; }
 .doc-item b { display: block; color: var(--navy); font-size: 0.92rem; font-weight: 600; }
@@ -1329,7 +1340,7 @@ body.nav-locked { overflow: hidden; }
 .prose ul li::before {
   content: ''; position: absolute; left: 4px; top: 10px;
   width: 7px; height: 7px; border-radius: 50%;
-  border: 1.5px solid var(--green);
+  border: 1.5px solid var(--blue);
 }
 .prose figure { margin: var(--s4) 0; }
 .prose figcaption { margin-top: 10px; font-size: 0.85rem; color: var(--steel); }
