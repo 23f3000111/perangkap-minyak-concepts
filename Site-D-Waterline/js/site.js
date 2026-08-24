@@ -1389,15 +1389,6 @@
     return bar;
   };
 
-  APP.chassis.whatsapp = function () {
-    if (PM.qs('.wa-float')) return;
-    var a = el('a', {
-      class: 'wa-float', href: PM.waLink(), target: '_blank', rel: 'noopener',
-      'data-i18n-attr': 'aria-label:whatsapp', 'aria-label': t(S.ui.whatsapp)
-    }, [APP.ui.icon('ph-whatsapp-logo')]);
-    doc.body.appendChild(a);
-    return a;
-  };
 
   /* ---------------------------------------------------------------- motion
      Site D deliberately does NOT call PM.motion.boot(): that would add the
@@ -3419,7 +3410,6 @@
     PM.boot(function () {
       APP.chassis.header();
       APP.chassis.footer();
-      APP.chassis.whatsapp();
       if (typeof pageFn === 'function') pageFn(APP);
       bootMotion();
       PM.on('langchange', function () {

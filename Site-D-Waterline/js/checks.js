@@ -155,14 +155,21 @@
     host.remove();
   });
 
-  CHECKS.test('whatsapp float opens a real wa.me link', function () {
-    root.APP.chassis.whatsapp();
-    var a = doc.querySelector('.wa-float');
-    CHECKS.ok(a, 'float present');
-    CHECKS.ok(/^https:\/\/wa\.me\//.test(a.getAttribute('href')), 'wa.me href');
-    CHECKS.eq(a.getAttribute('rel'), 'noopener', 'rel');
-    CHECKS.ok(a.getAttribute('aria-label'), 'aria-label');
-    a.remove();
+  CHECKS.test('no second floating button competes with the assistant', function () {
+    /* The WhatsApp float was removed: two circles in one corner offered
+       two ways into the same conversation. WhatsApp still has to be one
+       tap away, so the route through the page is asserted instead. */
+    CHECKS.ok(!root.APP.chassis.whatsapp, 'the float builder is gone');
+    CHECKS.ok(!doc.querySelector('.wa-float'), 'nothing renders a float');
+
+    var cta = root.APP.blocks.cta({
+      heading: { en: 'Tell us your meal volume', bm: '-' },
+      primary: { href: 'contact.html', label: { en: 'Request a quote', bm: '-' } },
+      whatsapp: true
+    });
+    var wa = cta.querySelector('a[href^="https://wa.me/"]');
+    CHECKS.ok(wa, 'the call to action still reaches WhatsApp');
+    CHECKS.eq(wa.getAttribute('rel'), 'noopener', 'rel');
   });
 
   /* ------------------------------------------------------------ Task 4 */

@@ -166,9 +166,14 @@ button { font: inherit; color: inherit; }
   box-shadow: 0 6px 20px -14px rgba(11, 44, 83, 0.35);
 }
 
+/* Every piece here is nowrap, so nothing gives when the row runs out of
+   room - it just overflows the screen. The gaps and the link padding are
+   fluid instead, which buys back about 90px between 1280 and 1440 and is
+   what keeps the quote button on screen. */
 .hdr-in {
-  display: flex; align-items: center; gap: var(--s4);
+  display: flex; align-items: center; gap: clamp(16px, 1.7vw, 32px);
   height: var(--hdr-h);
+  min-width: 0;
   transition: height 240ms var(--e-out);
 }
 .site-header.is-stuck .hdr-in { height: var(--hdr-h-stuck); }
@@ -180,23 +185,28 @@ button { font: inherit; color: inherit; }
   font-family: var(--mono); font-size: 0.95rem; font-weight: 500; letter-spacing: 0.02em;
 }
 .hdr-words { display: flex; flex-direction: column; line-height: 1.15; }
-.hdr-name { color: var(--navy); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
-.hdr-tag  { color: var(--steel); font-size: 0.7rem; letter-spacing: 0.02em; }
+.hdr-name { color: var(--navy); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; white-space: nowrap; }
+.hdr-tag  { color: var(--steel); font-size: 0.7rem; letter-spacing: 0.02em; white-space: nowrap; }
+/* The tagline is the widest thing in the brand block and the least load
+   bearing, so it is the first to go: on sticking, and below the width
+   where the row would otherwise be squeezed. */
 .site-header.is-stuck .hdr-tag { display: none; }
+@media (max-width: 1360px) { .hdr-tag { display: none; } }
 
-.hdr-nav { margin-inline: auto; }
-.hdr-list { display: flex; align-items: center; gap: 4px; }
+.hdr-nav { margin-inline: auto; min-width: 0; }
+.hdr-list { display: flex; align-items: center; gap: 2px; }
 .hdr-list > li { position: relative; }
 
 .hdr-lnk {
   position: relative; display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 14px; background: none; border: 0; cursor: pointer;
-  color: var(--ink); font-size: 0.95rem; font-weight: 500; text-decoration: none;
+  padding: 10px clamp(9px, 0.85vw, 14px); background: none; border: 0; cursor: pointer;
+  color: var(--ink); font-size: clamp(0.88rem, 0.72vw + 0.3rem, 0.95rem);
+  font-weight: 500; text-decoration: none;
   white-space: nowrap;
 }
 .hdr-lnk i { font-size: 0.85em; color: var(--steel); transition: transform 200ms var(--e-out); }
 .hdr-lnk::after {
-  content: ''; position: absolute; left: 14px; right: 14px; bottom: 6px; height: 2px;
+  content: ''; position: absolute; left: 25%; right: 25%; bottom: 6px; height: 2px;
   background: var(--blue); transform: scaleX(0); transform-origin: left;
   transition: transform 240ms var(--e-out);
 }
@@ -245,6 +255,8 @@ button { font: inherit; color: inherit; }
 }
 .langbtn[aria-pressed="true"] { background: var(--navy); color: #fff; }
 
+.hdr-side > .pill { padding-inline: clamp(14px, 1.3vw, 22px); }
+
 .hdr-burger {
   display: none; width: 44px; height: 44px; border: 1px solid var(--hairline);
   border-radius: var(--r-sm); background: none; cursor: pointer; color: var(--navy);
@@ -283,7 +295,11 @@ button { font: inherit; color: inherit; }
 .sheet-foot { display: flex; align-items: center; gap: var(--s2); padding-top: var(--s3); }
 body.nav-locked { overflow: hidden; }
 
-@media (max-width: 1080px) {
+/* Seven nav items, a language toggle and a call to action need about
+   1215px between them even after the tightening above. Below that the
+   sheet is the honest answer: cramming them in is what pushed the quote
+   button off the screen in the first place. */
+@media (max-width: 1280px) {
   .hdr-nav, .hdr-side .langtoggle, .hdr-side > .pill { display: none; }
   .hdr-burger { display: grid; }
   .hdr-side { margin-left: auto; }
@@ -445,23 +461,12 @@ body.nav-locked { overflow: hidden; }
 .ftr-mini { display: flex; gap: var(--s3); }
 .ftr-legal { margin: 0; }
 
-/* ------------------------------------------------------- whatsapp float */
-/* Side by side with the assistant launcher rather than stacked above it:
-   the assistant's opening nudge grows upward out of its own button, and
-   stacked it landed on top of this one. */
-.wa-float {
-  position: fixed; right: 94px; bottom: 22px; z-index: 80;
-  width: 56px; height: 56px; border-radius: 50%;
-  display: grid; place-items: center; text-decoration: none;
-  /* WhatsApp's own brand green, not the site's accent. It is naming a
-     service, and a WhatsApp button in any other colour is a puzzle. This is
-     the only green left on Site D. */
-  background: #25D366; color: #fff; font-size: 1.7rem;
-  box-shadow: var(--lift);
-  transition: background 200ms var(--e-out), transform 200ms var(--e-out);
-}
-.wa-float:hover { background: #1EB558; transform: translateY(-2px); }
-@media (prefers-reduced-motion: reduce) { .wa-float { transition: none; } }
+/* The WhatsApp float is gone. Two circles in the same corner asked the
+   reader to choose between two ways of starting the same conversation,
+   and the assistant is the better of the two: it collects the model and
+   the meal volume first, then hands the whole thing to WhatsApp with the
+   details already written. WhatsApp is still one tap away from inside the
+   panel, from every call-to-action band and from the contact page. */
 
 @media (max-width: 1080px) {
   .ftr-cols { grid-template-columns: repeat(2, 1fr); }
