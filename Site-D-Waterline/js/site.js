@@ -10,6 +10,7 @@
   var PM = root.PM;
   var S  = PM.site;
   var C  = PM.catalog;
+  var L  = root.PM_LIBRARY || {};
   var el = PM.el;
   var t  = PM.t;
   var A  = PM.asset;
@@ -17,22 +18,55 @@
   var APP = { ui: {}, chassis: {}, blocks: {}, pages: {}, data: {} };
 
   /* ---------------------------------------------------------------- pages
-     Every page in SITE.nav is built. The placeholder route is kept for a
+     Every page in the nav is built. The placeholder route is kept for a
      link typed by hand that does not resolve, so nothing 404s, but no
      navigation entry reaches it any more. */
   var BUILT = [
-    'index.html', 'grease-traps.html', 'auto-dosing.html', 'bio-enzyme.html',
-    'others.html', 'model-finder.html', 'product.html',
-    'services.html', 'service.html',
+    'index.html', 'grease-traps.html', 'oil-interceptor.html', 'auto-dosing.html',
+    'bio-enzyme.html', 'cleaning-range.html', 'others.html', 'model-finder.html',
+    'product.html', 'services.html', 'service.html',
     'approvals.html', 'awards.html', 'lab-test.html', 'installation-guide.html',
+    'scheduled-waste.html',
     'about.html', 'project-gallery.html', 'videos.html', 'downloads.html',
-    'news.html', 'article.html', 'careers.html',
+    'news.html', 'article.html', 'careers.html', 'faq.html',
     'where-to-buy.html', 'contact.html', 'policies.html'
   ];
 
   /* Exposed so the check harness can assert against the real list rather
      than keeping a second copy that goes stale. */
   APP.built = function () { return BUILT.slice(); };
+
+  /* ------------------------------------------------------------- the nav
+     Site D's own copy of SITE.nav. The shared list also drives Site C,
+     which has none of the pages added in October, so the additions are
+     made here, each placed after a named sibling. */
+  var NAV_ADD = {
+    Products: [
+      { after: 'grease-traps.html', href: 'oil-interceptor.html',
+        label: { en: 'GreaseGo Oil Interceptor', bm: 'Pemintas Minyak GreaseGo' } },
+      { after: 'bio-enzyme.html', href: 'cleaning-range.html',
+        label: { en: 'Cleaning Range', bm: 'Rangkaian Pembersihan' } }
+    ],
+    Compliance: [
+      { after: 'installation-guide.html', href: 'scheduled-waste.html',
+        label: { en: 'Scheduled Waste Guide', bm: 'Panduan Sisa Berjadual' } }
+    ],
+    Company: [
+      { after: 'careers.html', href: 'faq.html', label: { en: 'FAQs', bm: 'Soalan Lazim' } }
+    ]
+  };
+
+  var NAV = S.nav.map(function (entry) {
+    if (!entry.children) return entry;
+    var children = entry.children.slice();
+    (NAV_ADD[entry.label.en] || []).forEach(function (add) {
+      var at = children.map(function (c) { return c.href; }).indexOf(add.after);
+      children.splice(at === -1 ? children.length : at + 1, 0, { href: add.href, label: add.label });
+    });
+    return { label: entry.label, children: children };
+  });
+
+  APP.nav = function () { return NAV; };
 
   APP.ui.href = function (href, label) {
     var page = String(href || '').split('?')[0];
@@ -157,13 +191,15 @@
     return el('span', attrs, kids);
   };
 
-  /* A published figure. Numeric values odometer; anything else prints. */
+  /* A published figure. Numeric values odometer; anything else prints, and
+     an {en, bm} pair follows the language switch. */
   APP.ui.figure = function (value, label, opts) {
     opts = opts || {};
-    var numeric = /^[0-9]+$/.test(String(value));
+    var pair = value !== null && typeof value === 'object';
+    var numeric = !pair && /^[0-9]+$/.test(String(value));
     var num = (opts.roll && numeric && !opts.raw)
       ? el('span', { class: 'fig-num', 'data-roll': String(value) })
-      : el('span', { class: 'fig-num', text: String(value) });
+      : el('span', Object.assign({ class: 'fig-num' }, pair ? labelAttrs(value) : { text: String(value) }));
     var card = el('div', { class: 'fig-card' }, [
       APP.ui.arc('tr'),
       num,
@@ -171,6 +207,193 @@
     ]);
     return card;
   };
+
+  /* -------------------------------------------------------- the documents
+     Every catalogue and drawing PDF in the library, flattened into one
+     list. Paths come from the model code: the PDF itself, a thumbnail of
+     its first page, and an image of each page for a browser that cannot
+     show a PDF inside the page. */
+  var DOC_KINDS = {
+    catalogue: { dir: 'catalogue', icon: 'ph-book-open',
+                 label: { en: 'Product catalogue', bm: 'Katalog produk' },
+                 title: { en: 'product catalogue', bm: 'Katalog produk' },
+                 file: 'catalogue' },
+    drawing:   { dir: 'drawings', icon: 'ph-ruler',
+                 label: { en: 'Drawing & installation guide', bm: 'Lukisan & panduan pemasangan' },
+                 title: { en: 'drawing & installation guide', bm: 'Lukisan & panduan pemasangan' },
+                 file: 'drawing-installation-guide' }
+  };
+  var docList = null;
+
+  APP.data.documents = function () {
+    if (docList) return docList;
+    docList = [];
+    (L.documents || []).forEach(function (m) {
+      var key = m.model.toLowerCase();
+      ['catalogue', 'drawing'].forEach(function (kind) {
+        var spec = m[kind];
+        if (!spec) return;
+        var k = DOC_KINDS[kind];
+        var pages = [];
+        for (var i = 1; i <= spec.pages; i++) pages.push('docs/pages/' + kind + '-' + key + '-' + i + '.webp');
+        docList.push({
+          id: kind + '-' + key, kind: kind, model: m.model, series: m.series,
+          file: 'docs/' + k.dir + '/' + key + '.pdf',
+          thumb: 'docs/thumbs/' + kind + '-' + key + '.webp',
+          pages: spec.pages, kb: spec.kb, pageImages: pages,
+          title: { en: m.model + ' ' + k.title.en, bm: k.title.bm + ' ' + m.model }
+        });
+      });
+    });
+    return docList;
+  };
+
+  APP.data.doc = function (id) {
+    return APP.data.documents().filter(function (d) { return d.id === id; })[0] || null;
+  };
+
+  /* PM.asset resolves everything under img/. Documents live beside it. */
+  function docUrl(path) { return PM.assets + path; }
+
+  function docMeta(d) {
+    return {
+      en: 'PDF, ' + d.pages + (d.pages === 1 ? ' page, ' : ' pages, ') + d.kb + ' KB',
+      bm: 'PDF, ' + d.pages + ' halaman, ' + d.kb + ' KB'
+    };
+  }
+
+  /* A real link to the file, so a middle click or "save link as" still
+     behaves as a link. A plain click opens the viewer instead. */
+  APP.ui.docLink = function (d) {
+    var k = DOC_KINDS[d.kind];
+    return el('a', { class: 'dl-btn', href: docUrl(d.file), 'data-doc': d.id }, [
+      APP.ui.icon(k.icon),
+      el('span', { class: 'dl-btn-copy' }, [
+        el('span', Object.assign({ class: 'dl-btn-name' }, labelAttrs(k.label))),
+        el('span', Object.assign({ class: 'dl-btn-meta' }, labelAttrs(docMeta(d))))
+      ])
+    ]);
+  };
+
+  /* ------------------------------------------------------- the PDF viewer
+     One dialog for the whole site, built the first time it is needed. A
+     desktop browser shows the PDF in a frame with its own zoom and print;
+     a phone browser cannot show a PDF inside a page at all, so there the
+     same dialog shows each page as an image. Download is offered either
+     way, and so is opening the file on its own. */
+  APP.ui.docViewer = (function () {
+    var box = null, parts = {}, lastFocus = null;
+
+    function canInline() {
+      return root.navigator.pdfViewerEnabled !== false && root.innerWidth >= 720;
+    }
+
+    function focusables() {
+      return PM.qsa('a[href], button, iframe', box).filter(function (n) { return n.offsetParent !== null; });
+    }
+
+    function build() {
+      parts.kicker = el('p', { class: 'cap docview-kicker' });
+      parts.title = el('h2', { class: 'docview-title', id: 'docview-title' });
+      parts.dl = el('a', { class: 'pill pill--accent docview-dl' }, [
+        el('span', labelAttrs({ en: 'Download PDF', bm: 'Muat turun PDF' })), APP.ui.icon('ph-download-simple')
+      ]);
+      parts.tab = el('a', { class: 'pill pill--ghost docview-tab', target: '_blank', rel: 'noopener' }, [
+        el('span', labelAttrs({ en: 'Open in new tab', bm: 'Buka di tab baharu' })), APP.ui.icon('ph-arrow-up-right')
+      ]);
+      parts.close = el('button', {
+        class: 'docview-close', type: 'button',
+        'data-i18n-attr': 'aria-label:close', 'aria-label': t(S.ui.close),
+        onclick: function () { close(); }
+      }, [APP.ui.icon('ph-x')]);
+      parts.body = el('div', { class: 'docview-body' });
+
+      box = el('div', {
+        class: 'docview', role: 'dialog', 'aria-modal': 'true',
+        'aria-labelledby': 'docview-title', hidden: 'hidden'
+      }, [
+        el('div', { class: 'docview-panel' }, [
+          el('div', { class: 'docview-bar' }, [
+            el('div', { class: 'docview-head' }, [parts.kicker, parts.title]),
+            el('div', { class: 'docview-tools' }, [parts.dl, parts.tab, parts.close])
+          ]),
+          parts.body
+        ])
+      ]);
+
+      box.addEventListener('click', function (e) { if (e.target === box) close(); });
+      box.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab') return;
+        var f = focusables();
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && doc.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && doc.activeElement === last) { e.preventDefault(); first.focus(); }
+      });
+      doc.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && box && !box.hidden) close();
+      });
+      doc.body.appendChild(box);
+    }
+
+    function open(d, opts) {
+      if (!d) return;
+      if (!box) build();
+      opts = opts || {};
+      var inline = opts.inline === undefined ? canInline() : !!opts.inline;
+      var href = docUrl(d.file);
+
+      lastFocus = doc.activeElement;
+      setLabel(parts.title, d.title);
+      setLabel(parts.kicker, docMeta(d));
+      parts.dl.setAttribute('href', href);
+      parts.dl.setAttribute('download', d.model + '-' + DOC_KINDS[d.kind].file + '.pdf');
+      parts.tab.setAttribute('href', href);
+
+      parts.body.textContent = '';
+      box.classList.toggle('is-pages', !inline);
+      if (inline) {
+        parts.body.appendChild(el('iframe', { class: 'docview-frame', src: href, title: t(d.title) }));
+      } else {
+        var pages = el('div', { class: 'docview-pages' });
+        d.pageImages.forEach(function (src, i) {
+          pages.appendChild(el('img', {
+            src: docUrl(src), loading: i === 0 ? null : 'lazy',
+            alt: t(d.title) + ', ' + t({ en: 'page ' + (i + 1) + ' of ' + d.pages,
+                                         bm: 'halaman ' + (i + 1) + ' daripada ' + d.pages })
+          }));
+        });
+        parts.body.appendChild(pages);
+      }
+
+      box.hidden = false;
+      doc.body.classList.add('nav-locked');
+      parts.close.focus();
+    }
+
+    function close() {
+      if (!box || box.hidden) return;
+      box.hidden = true;
+      /* Emptied rather than hidden, so the frame stops holding the file. */
+      parts.body.textContent = '';
+      doc.body.classList.remove('nav-locked');
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+      lastFocus = null;
+    }
+
+    return { open: open, close: close };
+  })();
+
+  /* Any document link anywhere opens the viewer on a plain click. */
+  doc.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var link = e.target && e.target.closest ? e.target.closest('[data-doc]') : null;
+    if (!link) return;
+    var d = APP.data.doc(link.getAttribute('data-doc'));
+    if (!d) return;
+    e.preventDefault();
+    APP.ui.docViewer.open(d);
+  });
 
   /* ---------------------------------------------------------------- band
      Every block is a band. The section owns its own background so its arc
@@ -318,6 +541,10 @@
       { value: 8,
         label: { en: 'Years warranty, 5 factory plus 3 on-site',
                  bm: 'Tahun waranti, 5 kilang serta 3 di tapak' } }
+    ];
+    if (set === 'penalties' && L.penalties) return [
+      { value: L.penalties.serious.figure, raw: true, label: L.penalties.serious.caption },
+      { value: L.penalties.regulatory.figure, raw: true, label: L.penalties.regulatory.caption }
     ];
     if (set === 'compliance') return [
       { value: S.certs.length,
@@ -1118,7 +1345,7 @@
 
   function navTree() {
     var ul = el('ul', { class: 'hdr-list' });
-    S.nav.forEach(function (entry) {
+    NAV.forEach(function (entry) {
       if (!entry.children) {
         ul.appendChild(el('li', null, [APP.ui.link(entry.href, entry.label, 'hdr-lnk')]));
         return;
@@ -1158,7 +1385,7 @@
       }, [APP.ui.icon('ph-x')])
     ]));
 
-    S.nav.forEach(function (entry) {
+    NAV.forEach(function (entry) {
       if (!entry.children) {
         inner.appendChild(APP.ui.link(entry.href, entry.label, 'sheet-lnk'));
         return;
@@ -1205,10 +1432,10 @@
   /* --------------------------------------------------------------- footer */
 
   function navGroup(labelEn) {
-    return S.nav.filter(function (n) { return n.children && n.label.en === labelEn; })[0];
+    return NAV.filter(function (n) { return n.children && n.label.en === labelEn; })[0];
   }
   function navLeaf(labelEn) {
-    return S.nav.filter(function (n) { return !n.children && n.label.en === labelEn; })[0];
+    return NAV.filter(function (n) { return !n.children && n.label.en === labelEn; })[0];
   }
 
   function footerCol(heading, entries) {
@@ -1678,6 +1905,11 @@
     });
 
     section.body.appendChild(list);
+    if (opts.more) {
+      section.body.appendChild(el('div', { class: 'faq-more' }, [
+        APP.ui.pill({ href: opts.more.href, label: opts.more.label, tone: 'ghost' })
+      ]));
+    }
     return section;
   };
 
@@ -1698,7 +1930,8 @@
       (g.rows || []).forEach(function (r) {
         rows.appendChild(el(r.href ? 'a' : 'div', Object.assign(
           { class: 'list-row' },
-          r.href ? { href: r.raw ? r.href : PM.langHref(APP.ui.href(r.href, r.name)) } : {}
+          r.href ? { href: r.raw ? r.href : PM.langHref(APP.ui.href(r.href, r.name)) } : {},
+          r.target ? { target: r.target, rel: 'noopener' } : {}
         ), [
           el('b', typeof r.name === 'string' ? { text: r.name } : labelAttrs(r.name)),
           r.note ? el('span', typeof r.note === 'string' ? { text: r.note } : labelAttrs(r.note)) : null,
@@ -1729,20 +1962,346 @@
     grid.style.setProperty('--cols', String(opts.cols || 4));
 
     (opts.items || []).forEach(function (item, i) {
-      var label = item.alt || (t({ en: 'Installation record ', bm: 'Rekod pemasangan ' }) +
-        String(i + 1).padStart(2, '0'));
+      /* A caption given as an {en, bm} pair follows the language switch;
+         a plain alt string is fixed at render, as the archive plates are. */
+      var label = item.alt || (item.caption ? t(item.caption) :
+        (t({ en: 'Installation record ', bm: 'Rekod pemasangan ' }) + String(i + 1).padStart(2, '0')));
       grid.appendChild(el('figure', {
         class: 'doc-item', 'data-anim': 'rise',
-        'data-lightbox': A(item.img),
+        'data-lightbox': A(item.full || item.img),
         'data-lightbox-alt': label,
         'data-lightbox-cap': label
       }, [
         el('span', { class: 'frame frame--' + (item.frame || 'sheet') }, [
           el('img', { src: A(item.img), alt: label, loading: 'lazy' })
         ]),
-        el('figcaption', null, [el('b', { text: label })])
+        el('figcaption', null, [
+          item.kicker ? el('span', { class: 'mono doc-kicker', text: item.kicker }) : null,
+          el('b', item.caption ? labelAttrs(item.caption) : { text: label })
+        ])
       ]));
     });
+
+    section.body.appendChild(grid);
+    return section;
+  };
+
+  /* ====================================================================
+     THE THIRD KIT
+     Five more, for the October material: a tabbed problem and fix, a row
+     of numbered steps, a published data table, a shelf of PDFs, and a
+     product range with filters. Same contract: each returns a <section>.
+     ==================================================================== */
+
+  /* Full-size and display-size versions of a supplied sheet. */
+  function sheetSrc(base, small) { return base + (small ? '-sm.webp' : '.webp'); }
+
+  /* A sheet thumbnail that opens full size in the shared lightbox. */
+  function sheetFigure(sheet, cls) {
+    var title = t(sheet.title);
+    return el('figure', {
+      class: cls || 'iss-sheet',
+      'data-lightbox': A(sheetSrc(sheet.img)),
+      'data-lightbox-alt': title,
+      'data-lightbox-cap': title
+    }, [
+      el('img', { src: A(sheetSrc(sheet.img, true)), alt: title, loading: 'lazy' }),
+      el('figcaption', null, [
+        APP.ui.icon('ph-magnifying-glass-plus'),
+        el('span', labelAttrs(sheet.title))
+      ])
+    ]);
+  }
+
+  function checkList(pair, cls) { return bilingualList(pair, cls || 'ticks'); }
+
+  /* ----------------------------------------------------- S20 the issues
+     One tab per kind of trap. Each panel puts what goes wrong beside the
+     client's own sheet for it, then why, then the fix with a way to buy
+     it. Arrow keys move between tabs, as a tablist should. */
+  APP.blocks.issues = function (opts) {
+    opts = opts || {};
+    var items = opts.items || L.issues || [];
+    var section = APP.blocks._band('issues', opts);
+    if (opts.eyebrow || opts.heading || opts.body) section.body.appendChild(bandHead(opts));
+
+    var uid = ++jumpSeq;
+    var tabs = [], panels = [];
+    var list = el('div', { class: 'iss-tabs', role: 'tablist', 'aria-label': t(opts.heading || { en: 'Common issues', bm: 'Masalah biasa' }) });
+
+    items.forEach(function (it, i) {
+      var tabId = 'iss-tab-' + uid + '-' + i;
+      var panelId = 'iss-panel-' + uid + '-' + i;
+
+      var tab = el('button', {
+        class: 'iss-tab', type: 'button', role: 'tab', id: tabId,
+        'aria-controls': panelId, 'aria-selected': 'false', tabindex: '-1'
+      }, [
+        el('span', { class: 'iss-letter fig', text: it.letter }),
+        el('span', { class: 'iss-tab-copy' }, [
+          el('span', Object.assign({ class: 'iss-tab-kicker' }, labelAttrs({
+            en: 'Common issue ' + it.letter, bm: 'Masalah biasa ' + it.letter
+          }))),
+          el('span', Object.assign({ class: 'iss-tab-title' }, labelAttrs(it.title)))
+        ])
+      ]);
+      tab.addEventListener('click', function () { select(i); });
+      tabs.push(tab);
+      list.appendChild(tab);
+
+      var complaints = el('ul', { class: 'iss-complaints' }, (it.complaints || []).map(function (c) {
+        return el('li', null, [APP.ui.icon('ph-warning-circle'), el('span', labelAttrs(c))]);
+      }));
+
+      var links = el('div', { class: 'iss-links' }, (it.links || []).map(function (l, n) {
+        return APP.ui.pill({ href: l.href, label: l.label, tone: n === 0 ? 'accent' : 'ghost' });
+      }));
+
+      var more = (it.more || []).length ? el('div', { class: 'iss-more' }, [
+        el('p', Object.assign({ class: 'cap iss-more-h' }, labelAttrs({ en: 'The solution sheets', bm: 'Helaian penyelesaian' }))),
+        el('div', { class: 'iss-more-row' }, it.more.map(function (s) { return sheetFigure(s, 'iss-thumb'); }))
+      ]) : null;
+
+      var panel = el('div', {
+        class: 'iss-panel', role: 'tabpanel', id: panelId,
+        'aria-labelledby': tabId, tabindex: '0', hidden: 'hidden'
+      }, [
+        el('div', { class: 'iss-copy' }, [
+          APP.ui.eyebrow({ en: 'Common issue ' + it.letter, bm: 'Masalah biasa ' + it.letter }),
+          el('h3', Object.assign({ class: 'iss-title' }, labelAttrs(it.title))),
+          el('p', Object.assign({ class: 'lead' }, labelAttrs(it.summary))),
+          complaints,
+          el('div', { class: 'iss-cols' }, [
+            el('div', null, [
+              el('h4', labelAttrs({ en: 'Why it happens', bm: 'Mengapa ia berlaku' })),
+              bilingualList(it.why, 'bullets iss-why')
+            ]),
+            el('div', null, [
+              el('h4', labelAttrs({ en: 'What fixes it', bm: 'Apa penyelesaiannya' })),
+              checkList(it.fix, 'ticks')
+            ])
+          ]),
+          links
+        ]),
+        el('div', { class: 'iss-media' }, [sheetFigure(it.sheet), more])
+      ]);
+      panels.push(panel);
+    });
+
+    function select(i, focus) {
+      i = ((i % items.length) + items.length) % items.length;
+      tabs.forEach(function (tab, n) {
+        tab.setAttribute('aria-selected', String(n === i));
+        tab.setAttribute('tabindex', n === i ? '0' : '-1');
+        panels[n].hidden = n !== i;
+      });
+      if (focus) tabs[i].focus();
+    }
+
+    list.addEventListener('keydown', function (e) {
+      var at = tabs.indexOf(e.target);
+      if (at === -1) return;
+      var next = null;
+      if (e.key === 'ArrowRight') next = at + 1;
+      else if (e.key === 'ArrowLeft') next = at - 1;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = tabs.length - 1;
+      if (next === null) return;
+      e.preventDefault();
+      select(next, true);
+    });
+
+    section.select = select;
+    section.body.appendChild(list);
+    panels.forEach(function (p) { section.body.appendChild(p); });
+    if (items.length) select(0);
+    return section;
+  };
+
+  /* ------------------------------------------------------- S21 the steps
+     A row of numbered cards, for a sequence the reader should take in
+     order: how the interceptor works, how the service runs, how to tell
+     what a waste oil is worth. */
+  APP.blocks.steps = function (opts) {
+    opts = opts || {};
+    var items = opts.items || [];
+    var section = APP.blocks._band('steps', opts);
+    if (opts.eyebrow || opts.heading || opts.body) section.body.appendChild(bandHead(opts));
+
+    var row = el('ol', { class: 'step-row', 'data-stagger': '70' });
+    row.style.setProperty('--cols', String(Math.min(items.length, opts.cols || 4)));
+    items.forEach(function (it, i) {
+      row.appendChild(el('li', { class: 'step-card' + (it.tone ? ' step-card--' + it.tone : ''), 'data-anim': 'rise' }, [
+        el('span', { class: 'fig step-num', 'aria-hidden': 'true', text: String(i + 1).padStart(2, '0') }),
+        el('h3', Object.assign({ class: 'step-title' }, labelAttrs(it.title))),
+        it.body ? el('p', Object.assign({ class: 'cap step-body' }, labelAttrs(it.body))) : null,
+        it.answer ? el('p', Object.assign({ class: 'step-answer step-answer--' + (it.verdict || 'none') }, labelAttrs(it.answer))) : null
+      ]));
+    });
+    section.body.appendChild(row);
+    if (opts.note) section.body.appendChild(el('p', Object.assign({ class: 'cap block-note' }, labelAttrs(opts.note))));
+    return section;
+  };
+
+  /* --------------------------------------------------- S22 the data table
+     A published table that is not the model sheet: the GTASP range, the
+     waste oil codes, the offences. Columns name a key or a getter; a cell
+     may be a string, an {en, bm} pair or a node. The first column is the
+     row header. Below 720px the shared table styles turn each row into a
+     labelled card. */
+  APP.blocks.datatable = function (opts) {
+    opts = opts || {};
+    var cols = opts.columns || [];
+    var section = APP.blocks._band('datatable', opts);
+    if (opts.eyebrow || opts.heading || opts.body) section.body.appendChild(bandHead(opts));
+    if (opts.before) section.body.appendChild(opts.before);
+
+    var head = el('tr', null, cols.map(function (c) {
+      return el('th', Object.assign({ scope: 'col' }, labelAttrs(c.label)));
+    }));
+    var body = el('tbody');
+    (opts.rows || []).forEach(function (row) {
+      var tr = el('tr', row.serious ? { class: 'is-serious' } : null);
+      cols.forEach(function (c, n) {
+        var v = c.get ? c.get(row) : row[c.key];
+        var attrs = { class: c.mono ? 'fig' : null, 'data-label': t(c.label) };
+        if (n === 0) attrs.scope = 'row';
+        var cell;
+        if (v && v.nodeType) cell = el(n === 0 ? 'th' : 'td', attrs, [v]);
+        else cell = el(n === 0 ? 'th' : 'td', Object.assign(attrs, labelAttrs(v === undefined || v === null ? '' : (typeof v === 'number' ? String(v) : v))));
+        tr.appendChild(cell);
+      });
+      body.appendChild(tr);
+    });
+
+    section.body.appendChild(el('div', { class: 'table-wrap', 'data-anim': 'rise' }, [
+      el('table', { class: 'spec-table data-table' + (opts.wide ? ' data-table--wide' : '') }, [
+        el('thead', null, [head]), body
+      ])
+    ]));
+    (opts.notes || []).forEach(function (note) {
+      section.body.appendChild(el('p', Object.assign({ class: 'cap block-note' }, labelAttrs(note))));
+    });
+    return section;
+  };
+
+  /* ------------------------------------------------- S23 the document shelf
+     One card per model, carrying that model's PDFs. The thumbnail is the
+     document's own first page. Series chips filter the shelf in place, so
+     the heading and the scroll position stay where they are. */
+  APP.blocks.docshelf = function (opts) {
+    opts = opts || {};
+    var kinds = opts.kinds || ['catalogue', 'drawing'];
+    var models = opts.models || L.documents || [];
+    var section = APP.blocks._band('docshelf', opts);
+    if (opts.eyebrow || opts.heading || opts.body) section.body.appendChild(bandHead(opts));
+
+    var grid = el('div', { class: 'dl-grid' + (opts.compact ? ' dl-grid--compact' : '') });
+    var cards = [];
+    models.forEach(function (m) {
+      var docs = kinds.map(function (k) { return APP.data.doc(k + '-' + m.model.toLowerCase()); })
+        .filter(Boolean);
+      if (!docs.length) return;
+      var lead = docs[0];
+      /* The thumbnail is a pointer shortcut to the first document. It is
+         hidden from assistive tech because the button below says the same. */
+      var thumb = el('span', { class: 'dl-thumb dl-thumb--' + lead.kind, 'aria-hidden': 'true' }, [
+        el('img', { src: docUrl(lead.thumb), alt: '', loading: 'lazy' })
+      ]);
+      thumb.addEventListener('click', function () { APP.ui.docViewer.open(lead); });
+      var card = el('article', { class: 'dl-card', 'data-series': m.series }, [
+        thumb,
+        el('div', { class: 'dl-body' }, [
+          el('p', Object.assign({ class: 'cap dl-series' }, labelAttrs(SERIES_LABEL[m.series] || m.series))),
+          el('h3', { class: 'dl-model fig', text: m.model }),
+          el('div', { class: 'dl-actions' }, docs.map(APP.ui.docLink))
+        ])
+      ]);
+      cards.push(card);
+      grid.appendChild(card);
+    });
+
+    if (opts.filters) {
+      var present = Object.keys(SERIES_LABEL).filter(function (k) {
+        return models.some(function (m) { return m.series === k; });
+      });
+      section.body.appendChild(chipRow(
+        [{ id: 'all', label: { en: 'All models', bm: 'Semua model' } }].concat(present.map(function (k) {
+          return { id: k, label: SERIES_LABEL[k] };
+        })),
+        function (id) {
+          cards.forEach(function (c) { c.hidden = id !== 'all' && c.getAttribute('data-series') !== id; });
+        }
+      ));
+    }
+    section.body.appendChild(grid);
+    return section;
+  };
+
+  /* ---------------------------------------------------- S24 the range
+     A product line sold by the container rather than by the model: one
+     card each, artwork shown whole, capacity and dilution set in type, and
+     a WhatsApp price request that names the product. */
+  APP.blocks.range = function (opts) {
+    opts = opts || {};
+    var items = opts.items || [];
+    var groups = opts.groups || [];
+    var section = APP.blocks._band('range', opts);
+    if (opts.eyebrow || opts.heading || opts.body) section.body.appendChild(bandHead(opts));
+
+    var grid = el('div', { class: 'rng-grid' });
+    var cards = items.map(function (it) {
+      var name = it.brand ? it.brand + ' ' + it.name : it.name;
+      var wa = PM.waLink(PM.lang === 'bm'
+        ? 'Salam, saya ingin harga untuk ' + name + '.'
+        : 'Hello, I would like a price for ' + name + '.');
+      var card = el('article', { class: 'rng-card', 'data-group': it.group }, [
+        el('figure', {
+          class: 'rng-art', 'data-lightbox': A(it.img),
+          'data-lightbox-alt': name, 'data-lightbox-cap': name
+        }, [el('img', { src: A(it.img), alt: name, loading: 'lazy' })]),
+        el('div', { class: 'rng-body' }, [
+          el('p', { class: 'rng-num fig', text: String(it.n).padStart(2, '0') }),
+          el('h3', { class: 'rng-name', text: it.name }),
+          el('p', Object.assign({ class: 'cap rng-use' }, labelAttrs(it.use))),
+          el('dl', { class: 'rng-spec' }, [
+            el('dt', Object.assign({ class: 'cap' }, labelAttrs(S.ui.capacity))),
+            el('dd', { class: 'fig', text: it.capacity }),
+            el('dt', Object.assign({ class: 'cap' }, labelAttrs({ en: 'Dilution', bm: 'Pencairan' }))),
+            el('dd', labelAttrs(it.dilution))
+          ]),
+          el('a', { class: 'rng-ask', href: wa, target: '_blank', rel: 'noopener' }, [
+            el('span', labelAttrs(S.ui.requestPrice)), APP.ui.icon('ph-whatsapp-logo')
+          ])
+        ])
+      ]);
+      grid.appendChild(card);
+      return card;
+    });
+
+    if (groups.length) {
+      var count = el('p', { class: 'cap rng-count', 'aria-live': 'polite' });
+      var paint = function (n) {
+        setLabel(count, { en: n + ' products', bm: n + ' produk' });
+      };
+      section.body.appendChild(el('div', { class: 'rng-tools' }, [
+        chipRow(
+          [{ id: 'all', label: { en: 'All', bm: 'Semua' } }].concat(groups.map(function (g) {
+            return { id: g.id, label: g.label };
+          })),
+          function (id) {
+            var n = 0;
+            cards.forEach(function (c) {
+              c.hidden = id !== 'all' && c.getAttribute('data-group') !== id;
+              if (!c.hidden) n++;
+            });
+            paint(n);
+          }
+        ),
+        count
+      ]));
+      paint(cards.length);
+    }
 
     section.body.appendChild(grid);
     return section;
@@ -1768,18 +2327,38 @@
     return C.categories.filter(function (c) { return c.id === id; })[0];
   }
 
-  /* Project plates carry the site name printed into the picture, so they
-     take no caption of their own. */
-  function galleryItems(n) {
-    return S.gallery.slice(0, n).map(function (g, i) {
+  /* The field sheets: model and site, as printed across the top of each. */
+  function fieldCaption(f) {
+    return f.model
+      ? { en: f.model + ' · ' + f.site.en, bm: f.model + ' · ' + f.site.bm }
+      : f.site;
+  }
+
+  /* The home rail leads with sheets that name a model: a product seen in
+     the ground says more than a site name alone. */
+  function fieldItems(n) {
+    return (L.field || []).filter(function (f) {
+      return f.model && f.img.indexOf('gallery/') === 0;
+    }).slice(0, n).map(function (f) {
       return {
-        href: 'project-gallery.html', img: g.img, frame: 'sheet',
-        alt: t({ en: 'Completed installation, plate ' + (i + 1),
-                 bm: 'Pemasangan siap, plat ' + (i + 1) }),
-        title: { en: 'Installation record ' + String(i + 1).padStart(2, '0'),
-                 bm: 'Rekod pemasangan ' + String(i + 1).padStart(2, '0') }
+        href: 'project-gallery.html', img: f.img, frame: 'report',
+        alt: t(fieldCaption(f)), kicker: f.model || null, title: f.site
       };
     });
+  }
+
+  /* An FAQ entry from the library: a reference into SITE.faq, or its own
+     question and answer. */
+  function faqEntry(item) {
+    return item.ref !== undefined ? S.faq[item.ref] : item;
+  }
+
+  function faqById(id) {
+    var hit = null;
+    (L.faqTopics || []).forEach(function (topic) {
+      topic.items.forEach(function (item) { if (item.id === id) hit = faqEntry(item); });
+    });
+    return hit;
   }
 
   function newsItems() {
@@ -1929,12 +2508,12 @@
       cols: 4, items: categoryTiles()
     }));
 
-    /* 7 - projects */
+    /* 7 - projects, from the field sheets */
     add(APP.blocks.carousel({
       eyebrow: { en: 'Where they are', bm: 'Di mana ia berada' },
       heading: { en: 'Installed across Malaysia', bm: 'Dipasang di seluruh Malaysia' },
-      items: galleryItems(8),
-      moreLabel: { en: 'View plate', bm: 'Lihat plat' }
+      items: fieldItems(8),
+      moreLabel: { en: 'View the gallery', bm: 'Lihat galeri' }
     }));
 
     /* 8 - the quote */
@@ -1978,7 +2557,16 @@
       moreLabel: S.ui.readMore
     }));
 
-    /* 12 - the call to action */
+    /* 12 - the questions asked before almost every order */
+    add(APP.blocks.faq({
+      key: 'home',
+      eyebrow: { en: 'FAQs', bm: 'Soalan lazim' },
+      heading: { en: 'Asked before almost every order', bm: 'Ditanya sebelum hampir setiap pesanan' },
+      items: (L.faqHome || []).map(faqById).filter(Boolean),
+      more: { href: 'faq.html', label: { en: 'See all FAQs', bm: 'Lihat semua soalan lazim' } }
+    }));
+
+    /* 13 - the call to action */
     add(APP.blocks.cta(HOME_CTA));
   };
 
@@ -2220,6 +2808,18 @@
     ]));
     add(detail);
 
+    /* The model's own catalogue and drawing, where the client supplied them. */
+    var papers = (L.documents || []).filter(function (m) { return m.model === p.model; })[0];
+    if (papers) {
+      add(APP.blocks.docshelf({
+        jump: { en: 'Documents', bm: 'Dokumen' },
+        eyebrow: { en: 'Documents', bm: 'Dokumen' },
+        heading: { en: 'The catalogue and the drawing for ' + p.model,
+                   bm: 'Katalog dan lukisan bagi ' + p.model },
+        models: [papers], compact: true
+      }));
+    }
+
     var related = PM.related(p, 3);
     if (related.length) {
       add(APP.blocks.tiles({
@@ -2256,11 +2856,16 @@
       cta: { href: 'contact.html#enquiry', label: { en: 'Book a service', bm: 'Tempah servis' } }
     }));
 
-    add(APP.blocks.lead({
-      jump: { en: 'Introduction', bm: 'Pengenalan' },
-      eyebrow: { en: 'What we cover', bm: 'Apa yang kami liputi' },
-      heading: { en: 'Five services, one crew', bm: 'Lima perkhidmatan, satu kru' },
-      body: [{ en: S.contact.coverage.en, bm: S.contact.coverage.bm }]
+    /* The three complaints the crews are called out for most, one for each
+       kind of trap, each with the fix. These replaced the "What we cover"
+       introduction at the client's request. */
+    add(APP.blocks.issues({
+      tone: 'wash',
+      jump: { en: 'Common issues', bm: 'Masalah biasa' },
+      eyebrow: { en: 'Common issues', bm: 'Masalah biasa' },
+      heading: { en: 'What goes wrong, and what fixes it', bm: 'Apa yang tidak kena, dan apa penyelesaiannya' },
+      body: { en: 'The complaints we are called out for most, one for each kind of trap. Choose yours.',
+              bm: 'Aduan yang paling kerap kami terima, satu bagi setiap jenis perangkap. Pilih yang berkenaan.' }
     }));
 
     add(APP.blocks.expander({
@@ -2964,6 +3569,15 @@
       })
     }));
 
+    add(APP.blocks.docshelf({
+      jump: { en: 'Drawings', bm: 'Lukisan' },
+      eyebrow: { en: 'Drawings & installation guides', bm: 'Lukisan & panduan pemasangan' },
+      heading: { en: 'The drawing for every model', bm: 'Lukisan bagi setiap model' },
+      body: { en: 'Dimensions, pipe positions and the cross-section for setting the trap into the floor. Read them here, or download the PDF for your contractor.',
+              bm: 'Dimensi, kedudukan paip dan keratan rentas untuk memasang perangkap ke dalam lantai. Baca di sini, atau muat turun PDF untuk kontraktor anda.' },
+      kinds: ['drawing'], filters: true
+    }));
+
     add(APP.blocks.videos({
       tone: 'wash',
       jump: { en: 'On video', bm: 'Dalam video' },
@@ -2999,21 +3613,35 @@
     add(APP.blocks.hero({
       eyebrow: { en: 'Company', bm: 'Syarikat' },
       heading: { en: 'Project Gallery', bm: 'Galeri Projek' },
-      body: { en: 'Eighteen record sheets from the company archive, each carrying the site name printed into the picture.',
-              bm: 'Lapan belas helaian rekod dari arkib syarikat, setiap satu membawa nama tapak yang dicetak dalam gambar.' },
-      img: 'gallery/project-01.jpg', plate: true, frame: 'cardart',
+      body: { en: 'Recent installations straight from site, each sheet named with the model and the place, then the company archive.',
+              bm: 'Pemasangan terkini terus dari tapak, setiap helaian dinamakan dengan model dan lokasi, diikuti arkib syarikat.' },
+      img: 'gallery/field-09.webp', frame: 'report',
       ground: 'install/step-3.jpg',
-      alt: t({ en: 'A record sheet of completed installations', bm: 'Helaian rekod pemasangan siap' })
+      alt: t({ en: 'GTA3100 installed at Sea Frozen Food, Johor', bm: 'GTA3100 dipasang di Sea Frozen Food, Johor' })
     }));
 
     add(APP.blocks.gallery({
-      tone: 'wash', jump: { en: 'The plates', bm: 'Plat' },
+      tone: 'wash', jump: { en: 'Recent installations', bm: 'Pemasangan terkini' },
+      eyebrow: { en: 'From the field', bm: 'Dari lapangan' },
+      heading: { en: 'Recent installations', bm: 'Pemasangan terkini' },
+      body: { en: 'Dug, set, connected and covered. Press any sheet to see it full size.',
+              bm: 'Digali, dipasang, disambung dan ditutup. Tekan mana-mana helaian untuk melihatnya bersaiz penuh.' },
+      cols: 3,
+      items: (L.field || []).map(function (f) {
+        return { img: f.img, caption: f.site, kicker: f.model || null, frame: 'report',
+                 alt: t(fieldCaption(f)) };
+      })
+    }));
+
+    add(APP.blocks.gallery({
+      jump: { en: 'The archive', bm: 'Arkib' },
       eyebrow: { en: 'The archive', bm: 'Arkib' },
       heading: { en: 'Installed and photographed', bm: 'Dipasang dan dirakam' },
       cols: 3, items: S.gallery
     }));
 
     add(APP.blocks.listing({
+      tone: 'wash',
       jump: { en: 'Named sites', bm: 'Tapak bernama' },
       eyebrow: { en: 'Named sites', bm: 'Tapak bernama' },
       heading: { en: 'Where the traps are', bm: 'Di mana perangkap berada' },
@@ -3087,30 +3715,43 @@
     add(APP.blocks.hero({
       eyebrow: { en: 'Company', bm: 'Syarikat' },
       heading: { en: 'Brochures & Downloads', bm: 'Brosur & Muat Turun' },
-      body: { en: 'The model catalogue, the manuals, the dosing chart and the SIRIM certificate, in one place.',
-              bm: 'Katalog model, manual, carta dos dan sijil SIRIM, di satu tempat.' },
+      body: { en: 'The product catalogue and the drawing & installation guide for every model. Read them on the page, or download the PDF.',
+              bm: 'Katalog produk serta lukisan & panduan pemasangan bagi setiap model. Baca di halaman ini, atau muat turun PDF.' },
       img: 'brand/banner-oil-interceptor.jpg', plate: true, frame: 'cardart',
       ground: 'news/factory.webp',
       alt: t({ en: 'The oil interceptor product sheet', bm: 'Helaian produk pemintas minyak' })
     }));
 
+    add(APP.blocks.docshelf({
+      tone: 'wash', jump: { en: 'Catalogues & drawings', bm: 'Katalog & lukisan' },
+      eyebrow: { en: 'The library', bm: 'Pustaka' },
+      heading: { en: 'Every model, two documents each', bm: 'Setiap model, dua dokumen' },
+      body: { en: 'The catalogue is the one-page specification sheet. The drawing & installation guide carries the dimensions, the pipe positions and the cross-section your contractor will set it by.',
+              bm: 'Katalog ialah helaian spesifikasi satu halaman. Lukisan & panduan pemasangan mengandungi dimensi, kedudukan paip dan keratan rentas yang akan digunakan oleh kontraktor anda.' },
+      filters: true
+    }));
+
+    /* What the client has not supplied as a file yet stays a request. The
+       catalogue and the installation guide are no longer on this list:
+       they are on the shelf above, per model. */
+    var supplied = /catalogue|installation guide/i;
     add(APP.blocks.listing({
-      tone: 'wash', jump: { en: 'The shelf', bm: 'Rak' },
-      eyebrow: { en: 'The shelf', bm: 'Rak' },
-      heading: { en: 'Six documents', bm: 'Enam dokumen' },
-      body: { en: 'This is a design concept, so the files are listed rather than served. Ask on WhatsApp and the sales desk sends the current version.',
-              bm: 'Ini adalah konsep reka bentuk, jadi fail disenaraikan dan bukan dihidangkan. Tanya di WhatsApp dan meja jualan akan menghantar versi semasa.' },
-      cols: 2,
-      groups: [
-        { title: { en: 'Product literature', bm: 'Bahan produk' },
-          rows: S.downloads.slice(0, 3).map(function (d) {
-            return { name: d.name, meta: d.meta };
-          }) },
-        { title: { en: 'Compliance and reference', bm: 'Pematuhan dan rujukan' },
-          rows: S.downloads.slice(3).map(function (d) {
-            return { name: d.name, meta: d.meta };
-          }) }
-      ]
+      jump: { en: 'On request', bm: 'Atas permintaan' },
+      eyebrow: { en: 'On request', bm: 'Atas permintaan' },
+      heading: { en: 'Sent on WhatsApp', bm: 'Dihantar melalui WhatsApp' },
+      body: { en: 'These are sent by the sales desk, so you always receive the current version. Tap one to ask.',
+              bm: 'Dokumen ini dihantar oleh meja jualan, jadi anda sentiasa menerima versi terkini. Tekan untuk meminta.' },
+      cols: 1,
+      groups: [{
+        rows: S.downloads.filter(function (d) { return !supplied.test(d.name.en); }).map(function (d) {
+          return {
+            name: d.name, meta: d.meta, raw: true, target: '_blank',
+            href: PM.waLink(PM.lang === 'bm'
+              ? 'Salam, boleh hantar ' + d.name.bm + '?'
+              : 'Hello, could you send me the ' + d.name.en + '?')
+          };
+        })
+      }]
     }));
 
     add(APP.blocks.banner({
@@ -3367,6 +4008,317 @@
     add(APP.blocks.cta(HOME_CTA));
     APP.chassis.jumpbar([CRUMB_HOME,
       { href: 'policies.html', label: { en: 'Policies', bm: 'Dasar' } }]);
+  };
+
+  /* ============================================================ October
+     Four pages built from the client's October folder. */
+
+  /* --------------------------------------------- GreaseGo Oil Interceptor */
+  APP.pages.oilInterceptor = function () {
+    var oi = L.oilInterceptor;
+    var name = { en: 'GreaseGo Oil Interceptor', bm: 'Pemintas Minyak GreaseGo' };
+
+    add(APP.blocks.hero({
+      eyebrow: { en: 'Products', bm: 'Produk' },
+      heading: name,
+      body: { en: 'An advanced multi-stage system for oil and hydrocarbon separation, built for car service centres and workshops.',
+              bm: 'Sistem pelbagai peringkat termaju untuk pemisahan minyak dan hidrokarbon, dibina untuk pusat servis kereta dan bengkel.' },
+      img: 'brand/sheets/greasego-oil-interceptor-sm.webp', frame: 'cert',
+      ground: 'news/factory.webp',
+      alt: t({ en: 'The GreaseGo Oil Interceptor product sheet', bm: 'Helaian produk Pemintas Minyak GreaseGo' }),
+      cta: { href: 'contact.html#enquiry', label: S.ui.requestQuote },
+      links: [
+        { href: 'scheduled-waste.html', label: { en: 'Scheduled Waste Guide', bm: 'Panduan Sisa Berjadual' } },
+        { href: 'services.html', label: { en: 'Common oil interceptor issues', bm: 'Masalah biasa pemintas minyak' } }
+      ]
+    }));
+
+    add(APP.blocks.lead({
+      jump: { en: 'Introduction', bm: 'Pengenalan' },
+      eyebrow: oi.tagline,
+      heading: { en: 'Separate the oil before it all becomes SW312', bm: 'Asingkan minyak sebelum semuanya menjadi SW312' },
+      body: paraPairs(oi.intro)
+    }));
+
+    /* The cross-section, cropped from the supplied sheet with its own
+       labels, so it is shown whole and opens full size. */
+    var xsAlt = t({
+      en: 'Cross-section of the GreaseGo Oil Interceptor: debris and grit basket, primary settling chamber, main separation chamber with a coalescing plate pack, surface oil skimmer, oil collection tank, and clear water outlet chamber',
+      bm: 'Keratan rentas Pemintas Minyak GreaseGo: bakul serpihan dan kelikir, ruang pengenapan awal, ruang pemisahan utama dengan pek plat pengumpal, penyisih minyak permukaan, tangki pengumpulan minyak, dan ruang salur keluar air jernih'
+    });
+    var xs = APP.blocks._band('xsec', { tone: 'wash', jump: { en: 'Cross-section', bm: 'Keratan rentas' } });
+    xs.body.appendChild(bandHead({
+      eyebrow: { en: 'Cross-section', bm: 'Keratan rentas' },
+      heading: { en: 'Six chambers, from grit to clear water', bm: 'Enam ruang, dari kelikir ke air jernih' }
+    }));
+    xs.body.appendChild(el('figure', {
+      class: 'xsec', 'data-anim': 'rise',
+      'data-lightbox': A('brand/sheets/greasego-cross-section.webp'),
+      'data-lightbox-alt': xsAlt, 'data-lightbox-cap': t(name)
+    }, [el('img', { src: A('brand/sheets/greasego-cross-section.webp'), alt: xsAlt, loading: 'lazy' })]));
+    add(xs);
+
+    add(APP.blocks.steps({
+      jump: { en: 'How it works', bm: 'Cara ia berfungsi' },
+      eyebrow: { en: 'How it works', bm: 'Cara ia berfungsi' },
+      heading: { en: 'Four stages in one pass', bm: 'Empat peringkat dalam satu laluan' },
+      items: oi.steps
+    }));
+
+    var detail = APP.blocks._band('detail', { tone: 'wash', jump: { en: 'Benefits', bm: 'Kelebihan' } });
+    detail.body.appendChild(el('div', { class: 'detail-grid', 'data-anim': 'rise' }, [
+      el('div', null, [
+        el('h2', labelAttrs({ en: 'Why workshops fit it', bm: 'Mengapa bengkel memasangnya' })),
+        bilingualList(oi.benefits),
+        el('h3', labelAttrs({ en: 'Built for', bm: 'Dibina untuk' })),
+        el('ul', { class: 'badge-row' }, oi.applications.map(function (a) {
+          return el('li', Object.assign({ class: 'badge' }, labelAttrs(a)));
+        }))
+      ]),
+      el('div', { class: 'detail-side' }, [
+        el('p', { class: 'fig sus-mark', text: 'SUS 304' }),
+        el('h3', labelAttrs({ en: 'Stainless steel 304 throughout', bm: 'Keluli tahan karat 304 sepenuhnya' })),
+        checkList(oi.material)
+      ])
+    ]));
+    add(detail);
+
+    add(APP.blocks.datatable({
+      jump: S.ui.specs,
+      eyebrow: S.ui.specs,
+      heading: { en: 'The GTASP range', bm: 'Rangkaian GTASP' },
+      columns: [
+        { label: { en: 'Model', bm: 'Model' }, key: 'model', mono: true },
+        { label: S.ui.flowRate, get: function (m) { return m.flow + ' L/min'; }, mono: true },
+        { label: { en: 'Oil capacity, approx.', bm: 'Kapasiti minyak, anggaran' }, get: function (m) { return m.oil + ' L'; }, mono: true },
+        { label: { en: 'Water capacity', bm: 'Kapasiti air' }, get: function (m) { return m.water + ' L'; }, mono: true },
+        { label: { en: 'Inlet & outlet', bm: 'Salur masuk & keluar' }, get: function (m) { return m.pipe + ' mm'; }, mono: true },
+        { label: { en: 'L x W x H', bm: 'P x L x T' }, get: function (m) { return m.l + ' x ' + m.w + ' x ' + m.h + ' mm'; }, mono: true },
+        { label: { en: 'Inlet height', bm: 'Ketinggian salur masuk' }, get: function (m) { return m.inlet + ' mm'; }, mono: true },
+        { label: { en: 'Outlet height', bm: 'Ketinggian salur keluar' }, get: function (m) { return m.outlet + ' mm'; }, mono: true }
+      ],
+      rows: oi.models,
+      notes: [oi.note]
+    }));
+
+    add(APP.blocks.steps({
+      tone: 'navy',
+      jump: { en: 'The service', bm: 'Servis' },
+      eyebrow: { en: 'The service', bm: 'Servis' },
+      heading: { en: 'Not just pump and charge SW312', bm: 'Bukan sekadar mengepam dan mengenakan caj SW312' },
+      body: oi.service.problem,
+      items: oi.service.steps
+    }));
+
+    add(APP.blocks.cta({
+      heading: { en: 'Size an interceptor for your workshop', bm: 'Saizkan pemintas untuk bengkel anda' },
+      body: { en: 'Tell us how many service bays you run or the flow you need to handle. Custom sizes and an installation layout are proposed to suit the site.',
+              bm: 'Beritahu kami bilangan ruang servis anda atau aliran yang perlu dikendalikan. Saiz tersuai dan susun atur pemasangan dicadangkan mengikut tapak.' },
+      primary: { href: 'contact.html#enquiry', label: S.ui.requestQuote },
+      whatsapp: true,
+      waMessage: PM.lang === 'bm'
+        ? 'Salam, saya berminat dengan Pemintas Minyak GreaseGo.'
+        : 'Hello, I am interested in the GreaseGo Oil Interceptor.'
+    }));
+
+    APP.chassis.jumpbar([CRUMB_HOME, CRUMB_PRODUCTS, { href: 'oil-interceptor.html', label: name }]);
+  };
+
+  /* ---------------------------------------------- Scheduled Waste Guide */
+  function verdictBadge(key, label) {
+    return el('span', Object.assign({ class: 'sw-badge sw-badge--' + key }, labelAttrs(label)));
+  }
+
+  APP.pages.scheduledWaste = function () {
+    var wo = L.wasteOil, pen = L.penalties;
+    var name = { en: 'Scheduled Waste Guide', bm: 'Panduan Sisa Berjadual' };
+
+    add(APP.blocks.hero({
+      eyebrow: { en: 'Compliance', bm: 'Pematuhan' },
+      heading: name,
+      body: { en: 'Which waste oil you can sell, which you pay to dispose of, and what the law says when scheduled waste is handled wrongly.',
+              bm: 'Minyak terpakai mana yang boleh dijual, mana yang perlu dibayar untuk dilupuskan, dan apa kata undang-undang apabila sisa berjadual dikendalikan dengan salah.' },
+      img: 'brand/sheets/sw-sell-or-pay-sm.webp', frame: 'cert',
+      ground: 'service/sewerage-3.webp',
+      alt: t(wo.sheet.title),
+      cta: { href: 'service.html?s=schedule-waste-collection-register',
+             label: { en: 'Book a licensed collection', bm: 'Tempah kutipan berlesen' } }
+    }));
+
+    add(APP.blocks.datatable({
+      tone: 'wash',
+      jump: { en: 'Sell or pay', bm: 'Jual atau bayar' },
+      eyebrow: { en: 'Scheduled waste oil', bm: 'Minyak sisa berjadual' },
+      heading: { en: 'Can I sell it, or do I have to pay?', bm: 'Boleh saya jual, atau perlu saya bayar?' },
+      body: wo.lead,
+      before: el('ul', { class: 'sw-legend' }, wo.legend.map(function (l) {
+        return el('li', null, [verdictBadge(l.key, l.label)]);
+      })),
+      wide: true,
+      columns: [
+        { label: { en: 'SW code', bm: 'Kod SW' }, key: 'code', mono: true },
+        { label: { en: 'Type of waste oil', bm: 'Jenis minyak terpakai' }, get: function (r) {
+          return el('span', { class: 'sw-type' }, [
+            el('b', labelAttrs(r.type)),
+            el('span', Object.assign({ class: 'cap' }, labelAttrs(r.examples)))
+          ]);
+        } },
+        { label: { en: 'Typical condition', bm: 'Keadaan biasa' }, key: 'condition' },
+        { label: { en: 'Market reality', bm: 'Realiti pasaran' }, key: 'market' },
+        { label: { en: 'Can I get money?', bm: 'Boleh dapat wang?' }, get: function (r) { return verdictBadge(r.verdict, r.answer); } },
+        { label: { en: 'Notes', bm: 'Nota' }, key: 'note' }
+      ],
+      rows: wo.codes,
+      notes: [wo.footnote]
+    }));
+
+    add(APP.blocks.steps({
+      jump: { en: 'The simple guide', bm: 'Panduan mudah' },
+      eyebrow: { en: 'The simple guide', bm: 'Panduan mudah' },
+      heading: { en: 'Three questions settle most cases', bm: 'Tiga soalan menyelesaikan kebanyakan kes' },
+      cols: 3,
+      items: wo.guide.map(function (g) { return { title: g.question, answer: g.answer, verdict: g.verdict }; })
+    }));
+
+    var value = APP.blocks._band('detail', { tone: 'wash', jump: { en: 'What sets the value', bm: 'Apa yang menentukan nilai' } });
+    value.body.appendChild(el('div', { class: 'detail-grid', 'data-anim': 'rise' }, [
+      el('div', null, [
+        APP.ui.eyebrow({ en: 'What sets the value', bm: 'Apa yang menentukan nilai' }),
+        el('h2', labelAttrs({ en: 'Keep it clean and it is worth more', bm: 'Simpan dengan bersih dan nilainya lebih tinggi' })),
+        el('dl', { class: 'factor-list' }, wo.factors.reduce(function (acc, f) {
+          return acc.concat([
+            el('dt', labelAttrs(f.title)),
+            el('dd', Object.assign({ class: 'cap' }, labelAttrs(f.body)))
+          ]);
+        }, []))
+      ]),
+      el('div', { class: 'detail-side' }, [
+        el('h3', labelAttrs({ en: 'Before it leaves your site', bm: 'Sebelum ia meninggalkan tapak anda' })),
+        bilingualList(wo.notes)
+      ])
+    ]));
+    add(value);
+
+    add(APP.blocks.figures({
+      set: 'penalties', tone: 'navy',
+      jump: { en: 'Penalties', bm: 'Hukuman' },
+      eyebrow: { en: 'Penalties', bm: 'Hukuman' },
+      heading: { en: 'Penalties for scheduled waste offences in Malaysia',
+                 bm: 'Hukuman bagi kesalahan sisa berjadual di Malaysia' }
+    }));
+
+    add(APP.blocks.datatable({
+      jump: { en: 'The offences', bm: 'Kesalahan' },
+      eyebrow: { en: 'The offences', bm: 'Kesalahan' },
+      heading: { en: 'Sixteen offences, and the maximum for each', bm: 'Enam belas kesalahan, dan hukuman maksimum bagi setiap satu' },
+      columns: [
+        { label: { en: 'No.', bm: 'No.' }, get: function (r) { return String(pen.offences.indexOf(r) + 1); }, mono: true },
+        { label: { en: 'Offence', bm: 'Kesalahan' }, key: 'offence' },
+        { label: { en: 'Relevant law', bm: 'Undang-undang berkaitan' }, key: 'law' },
+        { label: { en: 'Maximum penalty', bm: 'Hukuman maksimum' }, get: function (r) {
+          return r.serious ? pen.serious.penalty : pen.regulatory.penalty;
+        } }
+      ],
+      rows: pen.offences,
+      notes: [pen.amendment, pen.compound, pen.source]
+    }));
+
+    add(APP.blocks.cta({
+      heading: { en: 'Have it collected, and recorded properly', bm: 'Minta ia dikutip, dan direkodkan dengan betul' },
+      body: { en: 'Licensed collection, the inventory and the eSWIS consignment, set up together so the paperwork matches what left your site.',
+              bm: 'Kutipan berlesen, inventori dan konsainan eSWIS, disediakan bersama supaya dokumen sepadan dengan apa yang keluar dari tapak anda.' },
+      primary: { href: 'service.html?s=schedule-waste-collection-register',
+                 label: { en: 'Scheduled waste collection', bm: 'Kutipan sisa berjadual' } },
+      whatsapp: true
+    }));
+
+    APP.chassis.jumpbar([CRUMB_HOME, { href: 'scheduled-waste.html', label: name }]);
+  };
+
+  /* ------------------------------------------------------- Cleaning range */
+  APP.pages.cleaningRange = function () {
+    var name = { en: 'Cleaning Range', bm: 'Rangkaian Pembersihan' };
+    var ask = PM.waLink(PM.lang === 'bm'
+      ? 'Salam, boleh hantar senarai harga rangkaian pembersihan GreaseGo?'
+      : 'Hello, could you send the price list for the GreaseGo cleaning range?');
+
+    add(APP.blocks.hero({
+      eyebrow: { en: 'Products', bm: 'Produk' },
+      heading: name,
+      body: { en: 'Thirty-two GreaseGo cleaning products for kitchens, floors, washrooms, laundry and workshops, most of them in 20, 10 and 5 litre containers.',
+              bm: 'Tiga puluh dua produk pembersihan GreaseGo untuk dapur, lantai, tandas, dobi dan bengkel, kebanyakannya dalam bekas 20, 10 dan 5 liter.' },
+      img: 'products/cleaning/01-dish-wash-high-foam.webp', frame: 'sheet',
+      ground: 'news/factory.webp',
+      alt: 'GreaseGo Dish Wash High Foam',
+      cta: { href: ask, raw: true, label: { en: 'Ask for the price list', bm: 'Minta senarai harga' } }
+    }));
+
+    add(APP.blocks.lead({
+      jump: { en: 'Introduction', bm: 'Pengenalan' },
+      eyebrow: { en: 'One supplier', bm: 'Satu pembekal' },
+      heading: { en: 'What the cleaning crew uses, from the people who service the trap',
+                 bm: 'Apa yang digunakan kru pembersihan, daripada pihak yang menyelenggara perangkap' },
+      body: [{ en: 'Dishwashing, floor care, disinfection, washroom hygiene, laundry and workshop degreasing. Every card gives the container sizes and the dilution, so you can see how far a container goes before you order.',
+               bm: 'Pencucian pinggan, penjagaan lantai, pembasmian kuman, kebersihan tandas, dobi dan penyahgris bengkel. Setiap kad menunjukkan saiz bekas dan kadar pencairan, supaya anda tahu sejauh mana satu bekas boleh digunakan sebelum membuat pesanan.' }]
+    }));
+
+    add(APP.blocks.range({
+      tone: 'wash',
+      jump: { en: 'The range', bm: 'Rangkaian' },
+      items: (L.cleaning || []).map(function (c) { return Object.assign({ brand: 'GreaseGo' }, c); }),
+      groups: L.cleaningGroups || []
+    }));
+
+    add(APP.blocks.cta({
+      heading: { en: 'Order by the container, or set up a standing supply',
+                 bm: 'Pesan mengikut bekas, atau aturkan bekalan tetap' },
+      body: { en: 'Tell us what you clean and how often. The sales desk sends the price list and the right dilution for each job.',
+              bm: 'Beritahu kami apa yang anda bersihkan dan berapa kerap. Meja jualan akan menghantar senarai harga dan kadar pencairan yang betul bagi setiap kerja.' },
+      primary: { href: 'contact.html#enquiry', label: S.ui.requestQuote },
+      whatsapp: true,
+      waMessage: PM.lang === 'bm'
+        ? 'Salam, saya ingin bertanya tentang rangkaian pembersihan GreaseGo.'
+        : 'Hello, I would like to ask about the GreaseGo cleaning range.'
+    }));
+
+    APP.chassis.jumpbar([CRUMB_HOME, CRUMB_PRODUCTS, { href: 'cleaning-range.html', label: name }]);
+  };
+
+  /* ---------------------------------------------------------------- FAQs */
+  APP.pages.faq = function () {
+    var name = { en: 'FAQs', bm: 'Soalan Lazim' };
+
+    add(APP.blocks.hero({
+      eyebrow: { en: 'Company', bm: 'Syarikat' },
+      heading: { en: 'Frequently Asked Questions', bm: 'Soalan Lazim' },
+      body: { en: 'Grease traps, the problems they cause, servicing, scheduled waste and ordering, answered in one place.',
+              bm: 'Perangkap minyak, masalah yang ditimbulkannya, servis, sisa berjadual dan pesanan, dijawab di satu tempat.' },
+      img: 'products/gta335-3.jpg',
+      ground: 'news/factory.webp',
+      alt: t({ en: 'A centralized grease trap on site', bm: 'Perangkap minyak berpusat di tapak' }),
+      cta: { href: PM.waLink(), raw: true, label: { en: 'Ask us on WhatsApp', bm: 'Tanya kami di WhatsApp' } }
+    }));
+
+    (L.faqTopics || []).forEach(function (topic, i) {
+      add(APP.blocks.faq({
+        key: topic.id, id: 'faq-' + topic.id,
+        tone: i % 2 ? 'wash' : null,
+        jump: topic.title,
+        eyebrow: topic.title,
+        heading: topic.heading,
+        items: topic.items.map(faqEntry)
+      }));
+    });
+
+    add(APP.blocks.cta({
+      heading: { en: 'Not answered here?', bm: 'Tiada jawapan di sini?' },
+      body: { en: 'Send the question with a photo of the trap or the site. The sales and service desk replies the same working day.',
+              bm: 'Hantar soalan bersama gambar perangkap atau tapak. Meja jualan dan servis akan membalas pada hari bekerja yang sama.' },
+      primary: { href: 'contact.html#enquiry', label: { en: 'Contact us', bm: 'Hubungi kami' } },
+      whatsapp: true
+    }));
+
+    APP.chassis.jumpbar([CRUMB_HOME, { href: 'faq.html', label: name }]);
   };
 
   /* ------------------------------------------------ the batch-two holder */

@@ -91,10 +91,10 @@
     return host;
   }
 
-  CHECKS.test('header renders the full nav from SITE.nav', function () {
+  CHECKS.test('header renders the full nav from Site D\'s own nav', function () {
     var host = headerFixture();
     CHECKS.ok(host.querySelector('.hdr-mark'), 'wordmark');
-    CHECKS.eq(host.querySelectorAll('[data-nav] > ul > li').length, root.PM_SITE.nav.length, 'top level items');
+    CHECKS.eq(host.querySelectorAll('[data-nav] > ul > li').length, 7, 'top level items');
     CHECKS.eq(host.querySelectorAll('[data-dropdown]').length, 3, 'three dropdown groups');
     CHECKS.ok(host.querySelector('[data-lang-btn="bm"]'), 'BM toggle');
     CHECKS.ok(host.querySelector('[data-nav-toggle]'), 'burger');
@@ -120,7 +120,7 @@
         CHECKS.eq(root.APP.ui.href(e.href, e.label), e.href, e.href + ' is built');
       });
     }
-    walk(root.PM.site.nav);
+    walk(root.APP.nav());
     CHECKS.eq(root.APP.ui.href('not-a-page.html', 'Nope'), 'soon.html?p=Nope', 'unknown page routed');
   });
 
@@ -665,11 +665,12 @@
     var order = root.PM.qsa('#main > .band').map(function (b) {
       return (b.className.match(/band--([a-z]+)/) || [])[1];
     });
-    /* Fourteen now: the supplied marketing banners sit under the hero and
-       the channel sits between the quote and the service tiles. */
-    CHECKS.eq(order.length, 14, 'fourteen bands');
+    /* Fifteen now: the supplied marketing banners sit under the hero, the
+       channel sits between the quote and the service tiles, and the FAQs
+       close the page just above the call to action. */
+    CHECKS.eq(order.length, 15, 'fifteen bands');
     CHECKS.eq(order.join(','),
-      'hero,banners,figures,statement,expander,sizer,tiles,carousel,quote,videos,tiles,figures,carousel,cta',
+      'hero,banners,figures,statement,expander,sizer,tiles,carousel,quote,videos,tiles,figures,carousel,faq,cta',
       'block order matches the spec');
   });
 
@@ -829,22 +830,379 @@
       }
       (entry.children || []).forEach(check);
     }
-    root.PM_SITE.nav.forEach(check);
+    root.APP.nav().forEach(check);
   });
 
   CHECKS.test('no rendered page contains a dead internal link', function () {
     /* Read from APP rather than restated here: a second copy of this list
-       is exactly what went stale when the rest of the site was built. */
+       is exactly what went stale when the rest of the site was built.
+       The PDFs are the one kind of link that leaves the page tree, and
+       they may only point into the shared document folder. Whether each
+       file is actually on disk is checked by tools/check-assets.js, since
+       a page opened from file:// cannot ask. */
     var built = root.APP.built().concat(['soon.html']);
-    ['home', 'greaseTraps', 'modelFinder', 'services', 'about', 'contact'].forEach(function (page) {
+    ['home', 'greaseTraps', 'modelFinder', 'services', 'about', 'contact',
+     'faq', 'oilInterceptor', 'scheduledWaste', 'cleaningRange',
+     'downloads', 'projectGallery', 'installGuide'].forEach(function (page) {
       renderPage(page);
       root.PM.qsa('#main a[href], .jumpbar a[href]').forEach(function (a) {
         var href = a.getAttribute('href');
         if (/^(https?:|mailto:|tel:|#)/.test(href)) return;
         var file = href.split('?')[0].split('#')[0];
         if (!file) return;
+        if (file.indexOf('../assets/') === 0) {
+          CHECKS.ok(/^\.\.\/assets\/(docs\/[a-z]+\/[a-z0-9-]+\.pdf|img\/.+\.(webp|jpe?g|png))$/.test(file),
+            page + ' links to an unexpected asset ' + file);
+          return;
+        }
         CHECKS.ok(built.indexOf(file) !== -1, page + ' links to ' + file + ' which is not built');
       });
+    });
+  });
+
+  /* -------------------------------------------- the October content update
+     Everything below arrived with the client's folder of slides, field
+     sheets and PDFs: four new pages, the PDF viewer, the common issues on
+     the services page, and FAQs reachable from the nav, the footer and
+     the bottom of the home page. Counts here are literals taken from the
+     supplied material, not read back from the data under test. */
+
+  function navGroupD(labelEn) {
+    return root.APP.nav().filter(function (n) { return n.children && n.label.en === labelEn; })[0];
+  }
+  function hrefs(entries) { return entries.map(function (e) { return e.href; }); }
+
+  CHECKS.test('Site D nav adds the four new pages in their groups', function () {
+    var products = hrefs(navGroupD('Products').children);
+    CHECKS.ok(products.indexOf('oil-interceptor.html') !== -1, 'oil interceptor under Products');
+    CHECKS.ok(products.indexOf('cleaning-range.html') !== -1, 'cleaning range under Products');
+    CHECKS.ok(hrefs(navGroupD('Compliance').children).indexOf('scheduled-waste.html') !== -1,
+      'scheduled waste guide under Compliance');
+    var company = hrefs(navGroupD('Company').children);
+    CHECKS.eq(company[company.length - 1], 'faq.html', 'FAQs close the Company group');
+    CHECKS.eq(company[company.length - 2], 'careers.html', 'right after Careers & Dealership');
+  });
+
+  CHECKS.test('the shared nav is left alone, so Site C links nothing it lacks', function () {
+    function all(entries) {
+      return entries.reduce(function (acc, e) {
+        return acc.concat(e.children ? all(e.children) : [e.href]);
+      }, []);
+    }
+    var shared = all(root.PM_SITE.nav);
+    ['faq.html', 'oil-interceptor.html', 'cleaning-range.html', 'scheduled-waste.html'].forEach(function (h) {
+      CHECKS.ok(shared.indexOf(h) === -1, h + ' must not be in the shared nav');
+    });
+  });
+
+  CHECKS.test('header and footer both carry the FAQ link', function () {
+    var header = headerFixture();
+    CHECKS.ok(header.querySelector('.hdr-mega a[href="faq.html"]'), 'FAQs in the Company dropdown');
+    CHECKS.ok(header.querySelector('.hdr-sheet a[href="faq.html"]'), 'FAQs in the mobile sheet');
+    header.remove();
+    var footer = footerFixture();
+    CHECKS.ok(footer.querySelector('.ftr-col a[href="faq.html"]'), 'FAQs in the footer');
+    footer.remove();
+  });
+
+  CHECKS.test('services page opens on the three common issues, not "What we cover"', function () {
+    renderPage('services');
+    var bands = root.PM.qsa('#main > .band');
+    CHECKS.ok(bands[1].classList.contains('band--issues'), 'issues band follows the hero');
+    CHECKS.ok(doc.getElementById('main').textContent.indexOf('Five services, one crew') === -1,
+      'the "What we cover" band is gone');
+    var tabs = root.PM.qsa('#main [role="tab"]');
+    CHECKS.eq(tabs.length, 3, 'three tabs');
+    ['A', 'B', 'C'].forEach(function (letter, i) {
+      CHECKS.ok(tabs[i].textContent.indexOf(letter) !== -1, 'tab ' + letter);
+    });
+    CHECKS.eq(doc.querySelectorAll('#main .band--expander .exp-card').length, 5, 'the five services stay');
+  });
+
+  CHECKS.test('choosing an issue tab shows only its panel', function () {
+    var tabs = root.PM.qsa('#main [role="tab"]');
+    var panels = root.PM.qsa('#main [role="tabpanel"]');
+    CHECKS.eq(panels.length, 3, 'three panels');
+    CHECKS.eq(tabs[0].getAttribute('aria-selected'), 'true', 'A starts selected');
+    CHECKS.ok(!panels[0].hidden && panels[1].hidden && panels[2].hidden, 'A starts visible');
+    tabs[2].click();
+    CHECKS.eq(tabs[2].getAttribute('aria-selected'), 'true', 'C selected');
+    CHECKS.eq(tabs[0].getAttribute('aria-selected'), 'false', 'A released');
+    CHECKS.ok(panels[0].hidden && panels[1].hidden && !panels[2].hidden, 'only C visible');
+    CHECKS.eq(panels[2].getAttribute('aria-labelledby'), tabs[2].id, 'panel names its tab');
+  });
+
+  CHECKS.test('arrow keys move between issue tabs', function () {
+    var tabs = root.PM.qsa('#main [role="tab"]');
+    tabs[0].click();
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    CHECKS.eq(tabs[1].getAttribute('aria-selected'), 'true', 'right arrow selects B');
+    tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    CHECKS.eq(tabs[0].getAttribute('aria-selected'), 'true', 'left arrow returns to A');
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    CHECKS.eq(tabs[2].getAttribute('aria-selected'), 'true', 'left from A wraps to C');
+  });
+
+  CHECKS.test('every model with documents carries a catalogue and a drawing', function () {
+    var docs = root.APP.data.documents();
+    CHECKS.eq(docs.length, 34, 'seventeen models, two documents each');
+    var seen = {};
+    docs.forEach(function (d) {
+      CHECKS.ok(/^docs\/(catalogue|drawings)\/[a-z0-9]+\.pdf$/.test(d.file), 'path shape ' + d.file);
+      CHECKS.ok(!seen[d.file], 'unique ' + d.file);
+      seen[d.file] = 1;
+      CHECKS.ok(d.pages >= 1, d.file + ' has pages');
+      CHECKS.eq(d.pageImages.length, d.pages, d.file + ' has one image per page');
+    });
+  });
+
+  function docFixture() {
+    return root.APP.data.documents().filter(function (d) { return d.id === 'drawing-gta3100'; })[0];
+  }
+
+  CHECKS.test('the viewer opens a PDF on the page with a download link', function () {
+    var d = docFixture();
+    CHECKS.ok(d, 'GTA3100 drawing is in the library');
+    var trigger = doc.createElement('button');
+    doc.body.appendChild(trigger);
+    trigger.focus();
+    var v = root.APP.ui.docViewer;
+    v.open(d, { inline: true });
+    var box = doc.querySelector('.docview');
+    CHECKS.ok(box && !box.hidden, 'viewer visible');
+    CHECKS.eq(box.getAttribute('role'), 'dialog', 'is a dialog');
+    var frame = box.querySelector('iframe.docview-frame');
+    CHECKS.ok(frame, 'pdf shown inline');
+    CHECKS.eq(frame.getAttribute('src'), '../assets/docs/drawings/gta3100.pdf', 'the right file');
+    var dl = box.querySelector('a.docview-dl');
+    CHECKS.ok(dl.hasAttribute('download'), 'download attribute');
+    CHECKS.eq(dl.getAttribute('href'), '../assets/docs/drawings/gta3100.pdf', 'download points at the file');
+    doc.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    CHECKS.ok(box.hidden, 'escape closes');
+    CHECKS.eq(doc.activeElement, trigger, 'focus goes back to what opened it');
+    CHECKS.ok(!doc.body.classList.contains('nav-locked'), 'page scroll released');
+    trigger.remove();
+  });
+
+  CHECKS.test('without an inline PDF reader the viewer shows every page as an image', function () {
+    var d = docFixture();
+    var v = root.APP.ui.docViewer;
+    v.open(d, { inline: false });
+    var box = doc.querySelector('.docview');
+    CHECKS.ok(!box.querySelector('iframe'), 'no iframe');
+    var imgs = box.querySelectorAll('.docview-pages img');
+    CHECKS.eq(imgs.length, d.pages, 'one image per page');
+    CHECKS.ok(imgs[0].getAttribute('alt').indexOf('GTA3100') !== -1, 'page image is labelled');
+    CHECKS.ok(box.querySelector('a.docview-dl[download]'), 'download still offered');
+    v.close();
+    CHECKS.ok(box.hidden, 'close hides it');
+  });
+
+  CHECKS.test('downloads page shelves every model and filters by series', function () {
+    renderPage('downloads');
+    CHECKS.eq(doc.querySelectorAll('#main .dl-card').length, 17, 'seventeen models');
+    CHECKS.eq(doc.querySelectorAll('#main .dl-card [data-doc]').length, 34, 'two documents each');
+    var shelf = doc.querySelector('#main .band--docshelf');
+    function visible() {
+      return root.PM.qsa('.dl-card', shelf).filter(function (c) { return !c.hidden; }).length;
+    }
+    var chips = root.PM.qsa('.chip', shelf);
+    var by = {};
+    chips.forEach(function (c) { by[c.textContent.trim()] = c; });
+    by['Centralized'].click();
+    CHECKS.eq(visible(), 13, 'thirteen centralized models');
+    by['Undersink'].click();
+    CHECKS.eq(visible(), 3, 'three undersink models');
+    by['Oil interceptor'].click();
+    CHECKS.eq(visible(), 1, 'one drain interceptor');
+    by['All models'].click();
+    CHECKS.eq(visible(), 17, 'reset');
+  });
+
+  CHECKS.test('a document button opens that document in the viewer', function () {
+    var btn = doc.querySelector('#main .dl-card [data-doc="catalogue-gta325"]');
+    CHECKS.ok(btn, 'GTA325 catalogue button');
+    btn.click();
+    var box = doc.querySelector('.docview');
+    CHECKS.ok(!box.hidden, 'viewer opened');
+    CHECKS.ok(box.querySelector('a.docview-dl').getAttribute('href').indexOf('docs/catalogue/gta325.pdf') !== -1,
+      'the matching file');
+    root.APP.ui.docViewer.close();
+  });
+
+  CHECKS.test('documents still requested on WhatsApp are listed, not linked to files', function () {
+    var rows = root.PM.qsa('#main .band--listing .list-row');
+    CHECKS.ok(rows.length >= 4, 'manual, data sheet, certificate and chart remain');
+    rows.forEach(function (r) {
+      var href = r.getAttribute('href') || '';
+      CHECKS.ok(href === '' || href.indexOf('https://wa.me/') === 0, 'on request: ' + r.textContent);
+    });
+  });
+
+  CHECKS.test('a documented model\'s product page offers its two PDFs', function () {
+    renderPage('product', 'centralized-grease-trap-gta3100');
+    var btns = doc.querySelectorAll('#main [data-doc]');
+    CHECKS.eq(btns.length, 2, 'catalogue and drawing');
+    renderPage('product', 'auto-dosing-unit-adu9291p');
+    CHECKS.eq(doc.querySelectorAll('#main [data-doc]').length, 0, 'no documents, no band');
+  });
+
+  CHECKS.test('installation guide page offers every drawing', function () {
+    renderPage('installGuide');
+    var btns = root.PM.qsa('#main [data-doc]');
+    CHECKS.eq(btns.length, 17, 'seventeen drawings');
+    btns.forEach(function (b) { CHECKS.ok(b.getAttribute('data-doc').indexOf('drawing-') === 0, 'drawings only'); });
+  });
+
+  CHECKS.test('project gallery leads with the field sheets, captioned by site', function () {
+    renderPage('projectGallery');
+    var bands = root.PM.qsa('#main .band--gallery');
+    CHECKS.eq(bands.length, 2, 'recent installations, then the archive');
+    CHECKS.eq(bands[0].querySelectorAll('.doc-item').length, 17, 'sixteen sheets plus the ADU install');
+    CHECKS.eq(bands[1].querySelectorAll('.doc-item').length, 18, 'eighteen archive plates');
+    CHECKS.ok(bands[0].textContent.indexOf('Sea Frozen Food') !== -1, 'captions name the site');
+    root.PM.qsa('img', bands[0]).forEach(function (img) {
+      CHECKS.ok(/^\.\.\/assets\/img\/(gallery\/field-\d\d|brand\/sheets\/[a-z0-9-]+)\.webp$/.test(img.getAttribute('src')),
+        'field sheet source ' + img.getAttribute('src'));
+    });
+  });
+
+  CHECKS.test('home carousel shows field sheets and the FAQ band links to the full page', function () {
+    renderPage('home');
+    var car = doc.querySelector('#main .band--carousel');
+    var first = car.querySelector('.car-card img');
+    CHECKS.ok(/gallery\/field-\d\d\.webp$/.test(first.getAttribute('src')), 'field sheet leads the carousel');
+    var faq = doc.querySelector('#main .band--faq');
+    CHECKS.eq(faq.querySelectorAll('.faq-item').length, 5, 'five questions on the home page');
+    CHECKS.ok(faq.querySelector('a[href="faq.html"]'), 'see all FAQs');
+  });
+
+  CHECKS.test('FAQ page groups every question under a topic with a jump entry each', function () {
+    renderPage('faq');
+    var bands = root.PM.qsa('#main .band--faq');
+    CHECKS.eq(bands.length, 5, 'five topics');
+    CHECKS.eq(doc.querySelectorAll('#main .faq-item').length, 21, 'twenty-one questions');
+    CHECKS.eq(doc.querySelectorAll('.jumpbar .jump-menu a').length, 5, 'one jump entry per topic');
+    var q = doc.querySelector('#main .faq-q');
+    CHECKS.ok(q.getAttribute('aria-controls') && doc.getElementById(q.getAttribute('aria-controls')),
+      'question controls its answer');
+  });
+
+  CHECKS.test('FAQ answers open and close', function () {
+    var item = root.PM.qsa('#main .faq-item')[1];
+    var q = item.querySelector('.faq-q');
+    var a = item.querySelector('.faq-a');
+    CHECKS.ok(a.hidden, 'second answer starts closed');
+    q.click();
+    CHECKS.ok(!a.hidden, 'opens');
+    CHECKS.eq(q.getAttribute('aria-expanded'), 'true', 'announced open');
+    q.click();
+    CHECKS.ok(a.hidden, 'closes');
+  });
+
+  CHECKS.test('oil interceptor page publishes the six GTASP models', function () {
+    renderPage('oilInterceptor');
+    var rows = root.PM.qsa('#main .band--datatable tbody tr');
+    CHECKS.eq(rows.length, 6, 'six models');
+    CHECKS.ok(rows[0].textContent.indexOf('GTASP-50') !== -1, 'smallest first');
+    CHECKS.ok(rows[5].textContent.indexOf('GTASP-750') !== -1, 'largest last');
+    CHECKS.ok(rows[5].textContent.indexOf('1620') !== -1 && rows[5].textContent.indexOf('5400') !== -1,
+      'GTASP-750 oil and water capacity as published');
+    CHECKS.ok(doc.querySelectorAll('#main .step-card').length >= 4, 'how it works, in stages');
+  });
+
+  CHECKS.test('scheduled waste guide answers sell-or-pay for six codes and lists sixteen offences', function () {
+    renderPage('scheduledWaste');
+    var tables = root.PM.qsa('#main .band--datatable');
+    CHECKS.eq(tables.length, 2, 'the code table and the offence table');
+    var codes = root.PM.qsa('tbody tr', tables[0]).map(function (tr) { return tr.querySelector('th, td').textContent.trim(); });
+    CHECKS.eq(codes.join(','), 'SW305,SW306,SW309,SW310,SW311,SW312', 'the six oil codes');
+    CHECKS.eq(tables[1].querySelectorAll('tbody tr').length, 16, 'sixteen offences');
+    var serious = tables[1].querySelector('tbody tr').textContent;
+    CHECKS.ok(serious.indexOf('RM10 million') !== -1, 'Section 34B carries the 2024 maximum');
+    CHECKS.ok(doc.getElementById('main').textContent.indexOf('remains RM500,000') === -1,
+      'the superseded RM500,000 ceiling is not presented as current');
+  });
+
+  CHECKS.test('cleaning range shows all thirty-two products and filters by use', function () {
+    renderPage('cleaningRange');
+    var band = doc.querySelector('#main .band--range');
+    var cards = root.PM.qsa('.rng-card', band);
+    CHECKS.eq(cards.length, 32, 'thirty-two products');
+    function visible() { return cards.filter(function (c) { return !c.hidden; }).length; }
+    var chips = root.PM.qsa('.chip', band);
+    var by = {};
+    chips.forEach(function (c) { by[c.textContent.trim()] = c; });
+    by['Laundry'].click();
+    CHECKS.eq(visible(), 3, 'bleach, softener, detergent');
+    by['All'].click();
+    CHECKS.eq(visible(), 32, 'reset');
+    var wa = cards[0].querySelector('a[href^="https://wa.me/"]');
+    CHECKS.ok(wa && decodeURIComponent(wa.getAttribute('href')).indexOf('Dish Wash High Foam') !== -1,
+      'price request names the product');
+  });
+
+  CHECKS.test('every image on the new pages carries alt text', function () {
+    ['faq', 'oilInterceptor', 'scheduledWaste', 'cleaningRange', 'services', 'downloads'].forEach(function (page) {
+      renderPage(page);
+      root.PM.qsa('#main img').forEach(function (img) {
+        if (img.closest('[aria-hidden="true"]')) return;
+        CHECKS.ok((img.getAttribute('alt') || '').trim().length > 0, page + ': alt on ' + img.getAttribute('src'));
+      });
+    });
+  });
+
+  CHECKS.test('the lightbox opens over the page, not below the footer', function () {
+    /* It used to render unstyled after the footer while the body was
+       scroll-locked, so a pressed certificate was unreachable. */
+    var host = doc.createElement('div');
+    host.appendChild(root.APP.blocks.docs({
+      items: [{ img: 'certs/award-biogt.jpg', name: 'Fixture certificate' }]
+    }));
+    doc.body.appendChild(host);
+    var before = root.PM.qsa('.lightbox').length;
+    root.PM.mountLightbox();
+    var overlay = root.PM.qsa('.lightbox')[before];
+    host.querySelector('[data-lightbox]').click();
+    var cs = getComputedStyle(overlay);
+    CHECKS.eq(cs.position, 'fixed', 'overlay is fixed');
+    var r = overlay.getBoundingClientRect();
+    CHECKS.ok(r.top <= 0 && r.bottom >= root.innerHeight - 1, 'covers the viewport');
+    CHECKS.ok(parseInt(cs.zIndex, 10) > 100, 'above the sticky header');
+    var img = overlay.querySelector('img').getBoundingClientRect();
+    CHECKS.ok(img.bottom <= root.innerHeight && img.right <= root.innerWidth, 'image fits the screen');
+    overlay.querySelector('.lightbox-close').click();
+    CHECKS.ok(overlay.hidden, 'closes');
+    CHECKS.eq(getComputedStyle(overlay).display, 'none', 'hidden overlay takes no space');
+    overlay.remove();
+    host.remove();
+  });
+
+  CHECKS.test('a table header never sits on top of its first row', function () {
+    /* The header cells were sticky at the page header's height, but inside
+       a horizontally scrolling wrapper that offset pushed the header row
+       down over the first model, GTA01. */
+    var host = doc.createElement('div');
+    doc.body.appendChild(host);
+    host.appendChild(root.APP.blocks.table({ filters: false }));
+    host.appendChild(root.APP.blocks.datatable({
+      columns: [{ label: 'Code', key: 'a' }, { label: 'Note', key: 'b' }],
+      rows: [{ a: 'X1', b: 'first' }, { a: 'X2', b: 'second' }]
+    }));
+    root.PM.qsa('table', host).forEach(function (tbl) {
+      var head = tbl.querySelector('thead th').getBoundingClientRect();
+      var first = tbl.querySelector('tbody tr').getBoundingClientRect();
+      CHECKS.ok(first.top >= head.bottom - 1,
+        'first row starts below the header (' + Math.round(first.top) + ' vs ' + Math.round(head.bottom) + ')');
+    });
+    host.remove();
+  });
+
+  CHECKS.test('the new pages each carry a jump bar and one h1', function () {
+    ['faq', 'oilInterceptor', 'scheduledWaste', 'cleaningRange'].forEach(function (page) {
+      renderPage(page);
+      CHECKS.eq(doc.querySelectorAll('#main h1').length, 1, page + ' has one h1');
+      CHECKS.ok(doc.querySelector('.jumpbar .crumb'), page + ' has a breadcrumb');
     });
   });
 
